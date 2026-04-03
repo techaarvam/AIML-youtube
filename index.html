@@ -153,10 +153,12 @@
 
     .content {
       padding: 24px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
     }
 
     .viewer-shell {
-      height: calc(100vh - 48px);
       border: 1px solid var(--line);
       border-radius: 18px;
       overflow: hidden;
@@ -187,33 +189,46 @@
 
     iframe {
       width: 100%;
-      height: calc(100% - 59px);
       border: 0;
       background: white;
+      display: block;
     }
 
     .empty {
       display: grid;
       place-items: center;
-      height: calc(100% - 59px);
+      min-height: 280px;
       padding: 32px;
       text-align: center;
       color: var(--muted);
-    }
-
-    .note {
-      margin-top: 22px;
-      padding: 14px;
-      border-left: 4px solid var(--accent);
-      background: rgba(255, 255, 255, 0.7);
-      color: var(--muted);
-      line-height: 1.5;
     }
 
     code {
       background: rgba(0, 0, 0, 0.05);
       padding: 0.1rem 0.3rem;
       border-radius: 4px;
+    }
+
+    .viewer-frame {
+      min-height: 720px;
+      height: 720px;
+    }
+
+    .feed-shell {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.76);
+      box-shadow: 0 20px 60px rgba(80, 58, 26, 0.08);
+    }
+
+    .feed-frame {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 420px;
+      border: 0;
+      display: block;
+      background: #fff;
     }
 
     @media (max-width: 900px) {
@@ -226,8 +241,12 @@
         border-bottom: 1px solid var(--line);
       }
 
-      .viewer-shell {
-        height: 72vh;
+      .viewer-frame {
+        min-height: 72vh;
+      }
+
+      .feed-frame {
+        min-height: 320px;
       }
     }
   </style>
@@ -238,7 +257,22 @@
       <h1 class="title">AIML YouTube</h1>
       <p class="subtitle"></p>
       <div id="page-list" class="list"></div>
-      <section class="feed" aria-label="TechAarvam YouTube feed">
+    </aside>
+
+    <main class="content">
+      <section class="viewer-shell">
+        <div class="viewer-header">
+          <h2 id="viewer-title" class="viewer-title">No page selected</h2>
+          <div>
+            <a id="viewer-open" class="page-path" href="#" target="_blank" rel="noopener noreferrer" hidden>Open Full Page</a>
+            <div id="viewer-meta" class="viewer-meta"></div>
+          </div>
+        </div>
+        <div id="empty-state" class="empty"></div>
+        <iframe id="viewer" class="viewer-frame" title="HTML preview" hidden></iframe>
+      </section>
+
+      <section class="feed-shell" aria-label="TechAarvam YouTube feed">
         <div class="feed-card">
           <div class="feed-head">
             <h2 class="feed-title">TechAarvam Feed</h2>
@@ -254,20 +288,6 @@
           ></iframe>
         </div>
       </section>
-    </aside>
-
-    <main class="content">
-      <section class="viewer-shell">
-        <div class="viewer-header">
-          <h2 id="viewer-title" class="viewer-title">No page selected</h2>
-          <div>
-            <a id="viewer-open" class="page-path" href="#" target="_blank" rel="noopener noreferrer" hidden>Open Full Page</a>
-            <div id="viewer-meta" class="viewer-meta"></div>
-          </div>
-        </div>
-        <div id="empty-state" class="empty"></div>
-        <iframe id="viewer" title="HTML preview" hidden></iframe>
-      </section>
     </main>
   </div>
 
@@ -280,6 +300,7 @@
     const viewerOpen = document.getElementById("viewer-open");
     const search = new URLSearchParams(window.location.search);
     const requestedPage = search.get("page");
+    let resizeTimer = null;
 
     function normalizePages(data) {
       if (!Array.isArray(data.pages)) {
@@ -323,6 +344,27 @@
       });
     }
 
+    function resizeViewer() {
+      if (viewer.hidden || !viewer.contentWindow) {
+        return;
+      }
+
+      try {
+        const doc = viewer.contentWindow.document;
+        const bodyHeight = doc.body ? doc.body.scrollHeight : 0;
+        const htmlHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
+        const nextHeight = Math.max(bodyHeight, htmlHeight, 720);
+        viewer.style.height = `${nextHeight}px`;
+      } catch (error) {
+        viewer.style.height = "720px";
+      }
+    }
+
+    function scheduleResize() {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(resizeViewer, 60);
+    }
+
     function renderList(pages) {
       pageList.innerHTML = "";
 
@@ -347,6 +389,24 @@
         pageList.appendChild(button);
       });
     }
+
+    viewer.addEventListener("load", () => {
+      scheduleResize();
+
+      try {
+        const frameWindow = viewer.contentWindow;
+        frameWindow.addEventListener("resize", scheduleResize);
+        const doc = frameWindow.document;
+
+        if (doc.fonts && doc.fonts.ready) {
+          doc.fonts.ready.then(scheduleResize).catch(() => {});
+        }
+      } catch (error) {
+        viewer.style.height = "720px";
+      }
+    });
+
+    window.addEventListener("resize", scheduleResize);
 
     async function init() {
       try {
