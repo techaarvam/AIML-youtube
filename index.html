@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIML YouTube HTML Viewer</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --panel: #fffaf0;
+      --ink: #1e1d1a;
+      --muted: #6d6659;
+      --line: #d7cfbf;
+      --accent: #b44f2f;
+      --accent-soft: #f3d7cc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #fffdf6 0, #fffdf6 22%, transparent 22%),
+        linear-gradient(135deg, #efe6d4 0%, #f8f4eb 45%, #ece4d6 100%);
+      min-height: 100vh;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      padding: 24px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.92);
+      backdrop-filter: blur(8px);
+    }
+
+    .title {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .subtitle {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .page-link {
+      display: block;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .page-link:hover,
+    .page-link:focus-visible {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .page-link.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .page-label {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .page-path {
+      display: block;
+      color: var(--muted);
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+
+    .content {
+      padding: 24px;
+    }
+
+    .viewer-shell {
+      height: calc(100vh - 48px);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 20px 60px rgba(80, 58, 26, 0.10);
+    }
+
+    .viewer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.9);
+    }
+
+    .viewer-title {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .viewer-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+
+    iframe {
+      width: 100%;
+      height: calc(100% - 59px);
+      border: 0;
+      background: white;
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      height: calc(100% - 59px);
+      padding: 32px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .note {
+      margin-top: 22px;
+      padding: 14px;
+      border-left: 4px solid var(--accent);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .viewer-shell {
+        height: 72vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1 class="title">AIML YouTube</h1>
+      <p class="subtitle">
+        Click any page to render it. The list comes from <code>pages.json</code>, which works cleanly with GitHub Pages.
+      </p>
+      <div id="page-list" class="list"></div>
+      <div class="note">
+        Add future HTML pages by updating <code>pages.json</code>. The selected page is persisted in the URL as <code>?page=...</code>.
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="viewer-shell">
+        <div class="viewer-header">
+          <h2 id="viewer-title" class="viewer-title">No page selected</h2>
+          <div id="viewer-meta" class="viewer-meta"></div>
+        </div>
+        <div id="empty-state" class="empty">
+          Select a page from the left.
+        </div>
+        <iframe id="viewer" title="HTML preview" hidden></iframe>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const pageList = document.getElementById("page-list");
+    const viewer = document.getElementById("viewer");
+    const emptyState = document.getElementById("empty-state");
+    const viewerTitle = document.getElementById("viewer-title");
+    const viewerMeta = document.getElementById("viewer-meta");
+    const search = new URLSearchParams(window.location.search);
+    const requestedPage = search.get("page");
+
+    function normalizePages(data) {
+      if (!Array.isArray(data.pages)) {
+        return [];
+      }
+
+      return data.pages
+        .filter((item) => item && typeof item.path === "string" && item.path.endsWith(".html"))
+        .map((item) => ({
+          title: item.title || item.path.replace(/\.html$/i, ""),
+          path: item.path
+        }));
+    }
+
+    function selectPage(path, pages) {
+      const selected = pages.find((page) => page.path === path) || pages[0];
+
+      if (!selected) {
+        viewer.hidden = true;
+        emptyState.hidden = false;
+        viewerTitle.textContent = "No page selected";
+        viewerMeta.textContent = "";
+        return;
+      }
+
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("page", selected.path);
+      history.replaceState({}, "", nextUrl);
+
+      viewer.src = selected.path;
+      viewer.hidden = false;
+      emptyState.hidden = true;
+      viewerTitle.textContent = selected.title;
+      viewerMeta.textContent = selected.path;
+
+      document.querySelectorAll(".page-link").forEach((button) => {
+        button.classList.toggle("active", button.dataset.path === selected.path);
+      });
+    }
+
+    function renderList(pages) {
+      pageList.innerHTML = "";
+
+      if (!pages.length) {
+        const message = document.createElement("p");
+        message.className = "subtitle";
+        message.textContent = "No pages listed yet.";
+        pageList.appendChild(message);
+        return;
+      }
+
+      pages.forEach((page) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "page-link";
+        button.dataset.path = page.path;
+        button.innerHTML = `
+          <span class="page-label">${page.title}</span>
+          <span class="page-path">${page.path}</span>
+        `;
+        button.addEventListener("click", () => selectPage(page.path, pages));
+        pageList.appendChild(button);
+      });
+    }
+
+    async function init() {
+      try {
+        const response = await fetch("./pages.json", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Unable to load pages.json (${response.status})`);
+        }
+
+        const data = await response.json();
+        const pages = normalizePages(data);
+        renderList(pages);
+        selectPage(requestedPage, pages);
+      } catch (error) {
+        pageList.innerHTML = `<p class="subtitle">${error.message}</p>`;
+        viewerTitle.textContent = "Configuration error";
+        viewerMeta.textContent = "Check pages.json";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

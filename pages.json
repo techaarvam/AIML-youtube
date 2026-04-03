@@ -1,0 +1,16 @@
+{
+  "pages": [
+    {
+      "title": "Equal-Area Ellipse Visual",
+      "path": "area_preserving_transformation.html"
+    },
+    {
+      "title": "Eigenvalue And Eigenvector Derivation",
+      "path": "eigen_derivation_visual.html"
+    },
+    {
+      "title": "Eigenvalues Real Vs Complex Dashboard",
+      "path": "eigenvalues_real_vs_complex_dashboard.html"
+    }
+  ]
+}
