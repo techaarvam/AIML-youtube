@@ -181,8 +181,8 @@
     }
 
     .viewer-frame {
-      min-height: 720px;
-      height: 720px;
+      min-height: 420px;
+      height: 420px;
     }
 
     @media (max-width: 900px) {
@@ -196,7 +196,7 @@
       }
 
       .viewer-frame {
-        min-height: 72vh;
+        min-height: 420px;
       }
 
     }
@@ -326,7 +326,7 @@
         const doc = viewer.contentWindow.document;
         const bodyHeight = doc.body ? doc.body.scrollHeight : 0;
         const htmlHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
-        const nextHeight = Math.max(bodyHeight, htmlHeight, 720);
+        const nextHeight = Math.max(bodyHeight, htmlHeight, 420);
         viewer.style.height = `${nextHeight}px`;
       } catch (error) {
         viewer.style.height = "420px";
