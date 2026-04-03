@@ -184,13 +184,8 @@
   <div class="layout">
     <aside class="sidebar">
       <h1 class="title">AIML YouTube</h1>
-      <p class="subtitle">
-        Click any page to render it on the right. Use the direct-open link when you want the standalone page without the launcher.
-      </p>
+      <p class="subtitle"></p>
       <div id="page-list" class="list"></div>
-      <div class="note">
-        Add future HTML pages by updating <code>pages.json</code>. The selected page stays in the URL as <code>?page=...</code> so refresh keeps the same selection.
-      </div>
     </aside>
 
     <main class="content">
@@ -202,9 +197,7 @@
             <div id="viewer-meta" class="viewer-meta"></div>
           </div>
         </div>
-        <div id="empty-state" class="empty">
-          Select a page from the left to render it here.
-        </div>
+        <div id="empty-state" class="empty"></div>
         <iframe id="viewer" title="HTML preview" hidden></iframe>
       </section>
     </main>
