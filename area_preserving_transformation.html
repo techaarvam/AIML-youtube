@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equal-Area Ellipse Visual</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f1e7;
+      --bg-accent: rgba(17, 101, 192, 0.08);
+      --panel: rgba(255, 251, 245, 0.82);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --border: rgba(82, 59, 30, 0.12);
+      --text: #1f1a16;
+      --muted: #6b6258;
+      --shadow: 0 24px 70px rgba(65, 47, 26, 0.12);
+      --code-bg: rgba(44, 38, 31, 0.06);
+      --svg-bg: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,242,234,0.98));
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171412;
+        --bg-accent: rgba(21, 101, 192, 0.14);
+        --panel: rgba(33, 28, 24, 0.88);
+        --panel-strong: rgba(43, 37, 33, 0.96);
+        --border: rgba(255, 234, 210, 0.1);
+        --text: #f2ebe3;
+        --muted: #b8ada1;
+        --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+        --code-bg: rgba(255, 255, 255, 0.06);
+        --svg-bg: linear-gradient(180deg, rgba(42,37,32,0.98), rgba(29,25,22,0.98));
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, var(--bg-accent), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(10, 167, 119, 0.08), transparent 24%),
+        var(--bg);
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .hero,
+    .panel,
+    .small {
+      background: linear-gradient(145deg, var(--panel-strong), var(--panel));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 18px 20px;
+      border-radius: 22px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2vw, 2rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .controls-card {
+      padding: 14px;
+      border-radius: 22px;
+      background: linear-gradient(145deg, var(--panel-strong), var(--panel));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+      margin: 0;
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.26);
+      border: 1px solid var(--border);
+    }
+
+    .control-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .control label {
+      font-size: 0.905rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0.08em;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #1565c0;
+    }
+
+    .value {
+      min-width: 58px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(21, 101, 192, 0.12);
+      font-size: 0.925rem;
+      font-weight: 700;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .control-static {
+      align-content: start;
+    }
+
+    .viz {
+      padding: 14px;
+      border-radius: 24px;
+      background: linear-gradient(145deg, var(--panel-strong), var(--panel));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    svg {
+      border: 1px solid var(--border);
+      background: var(--svg-bg);
+      width: 100%;
+      height: auto;
+      border-radius: 18px;
+      display: block;
+    }
+
+    .small {
+      padding: 12px 14px;
+      border-radius: 18px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    code {
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 6px;
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    @media (max-width: 800px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .wrap {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>Equal-Area Ellipse Visual</h1>
+  </section>
+
+  <section class="controls-card">
+    <div class="controls">
+      <div class="control">
+        <div class="control-top">
+          <label for="s1">σ₁</label>
+          <span class="value" id="s1v">4.00</span>
+        </div>
+        <input id="s1" type="range" min="0.5" max="6" step="0.01" value="4" />
+      </div>
+
+      <div class="control">
+        <div class="control-top">
+          <label for="s2">σ₂</label>
+          <span class="value" id="s2v">1.00</span>
+        </div>
+        <input id="s2" type="range" min="0.5" max="6" step="0.01" value="1" />
+      </div>
+
+      <div class="control">
+        <div class="control-top">
+          <label for="phi">phi</label>
+          <span class="value" id="phiv">0.785</span>
+        </div>
+        <input id="phi" type="range" min="0" max="1.57079632679" step="0.001" value="0.78539816339" />
+      </div>
+
+      <div class="control control-static">
+        <div class="control-top">
+          <label for="thetav">θ = angle(u, Au)</label>
+          <span class="value" id="thetav">—</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="viz">
+    <svg id="svg" viewBox="0 0 760 560" aria-label="Equal-area ellipse visual">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#111"></path>
+        </marker>
+        <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.18)"/>
+        </filter>
+      </defs>
+    </svg>
+  </section>
+
+</div>
+
+<script>
+const svg = document.getElementById('svg');
+const s1El = document.getElementById('s1');
+const s2El = document.getElementById('s2');
+const phiEl = document.getElementById('phi');
+const s1v = document.getElementById('s1v');
+const s2v = document.getElementById('s2v');
+const phiv = document.getElementById('phiv');
+const thetav = document.getElementById('thetav');
+
+const W = 760, H = 560;
+const cx = 380, cy = 280;
+const scale = 80;
+const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const COL = {
+  axis: isDark ? 'rgba(255,255,255,0.28)' : 'rgba(30,26,22,0.22)',
+  axisText: isDark ? '#bfb4a7' : '#6b6258',
+  grid: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+  unit: isDark ? 'rgba(255,255,255,0.18)' : '#d2c6b6',
+  fixed: isDark ? '#9d9388' : '#7f776e',
+  vector: '#5f6472',
+  image: '#1e1b18',
+  family: '#1565c0',
+  familyFill: 'rgba(21, 101, 192, 0.06)',
+  circle: '#0a9a74'
+};
+
+function fmt(x, n=3) { return Number(x).toFixed(n); }
+function deg(x) { return x * 180 / Math.PI; }
+function xpix(x) { return cx + scale * x; }
+function ypix(y) { return cy - scale * y; }
+function polar(theta) { return [Math.cos(theta), Math.sin(theta)]; }
+
+function clearSVG() {
+  while (svg.lastChild && svg.lastChild.tagName !== 'defs') svg.removeChild(svg.lastChild);
+}
+
+function line(x1,y1,x2,y2,attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','line');
+  el.setAttribute('x1', x1); el.setAttribute('y1', y1);
+  el.setAttribute('x2', x2); el.setAttribute('y2', y2);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  svg.appendChild(el); return el;
+}
+
+function circle(cx_,cy_,r,attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  el.setAttribute('cx',cx_); el.setAttribute('cy',cy_); el.setAttribute('r',r);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  svg.appendChild(el); return el;
+}
+
+function ellipse(cx_,cy_,rx,ry,rotDeg,attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  el.setAttribute('cx',cx_); el.setAttribute('cy',cy_);
+  el.setAttribute('rx',rx); el.setAttribute('ry',ry);
+  el.setAttribute('transform', `rotate(${rotDeg} ${cx_} ${cy_})`);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  svg.appendChild(el); return el;
+}
+
+function arc(cx_, cy_, r, startDeg, endDeg, attrs={}) {
+  const start = startDeg * Math.PI / 180;
+  const end = endDeg * Math.PI / 180;
+  const x1 = cx_ + r * Math.cos(start), y1 = cy_ - r * Math.sin(start);
+  const x2 = cx_ + r * Math.cos(end), y2 = cy_ - r * Math.sin(end);
+  const delta = ((endDeg - startDeg) % 360 + 360) % 360;
+  const largeArc = delta > 180 ? 1 : 0;
+  const sweep = 0;
+  const el = document.createElementNS('http://www.w3.org/2000/svg','path');
+  el.setAttribute('d', `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep} ${x2} ${y2}`);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  svg.appendChild(el); return el;
+}
+
+function text(x,y,str,attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','text');
+  el.setAttribute('x',x); el.setAttribute('y',y); el.textContent = str;
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  svg.appendChild(el); return el;
+}
+
+function drawAxes() {
+  for (let gx = 60; gx <= W - 60; gx += 40) {
+    line(gx, 48, gx, H - 48, {stroke: COL.grid, 'stroke-width': 1});
+  }
+  for (let gy = 48; gy <= H - 48; gy += 40) {
+    line(48, gy, W - 48, gy, {stroke: COL.grid, 'stroke-width': 1});
+  }
+  line(40, cy, W-40, cy, {stroke:COL.axis, 'stroke-width':1.2});
+  line(cx, 40, cx, H-40, {stroke:COL.axis, 'stroke-width':1.2});
+  text(W-52, cy-10, 'x', {'font-size':14, fill:COL.axisText, 'font-weight':'600'});
+  text(cx+10, 54, 'y', {'font-size':14, fill:COL.axisText, 'font-weight':'600'});
+}
+
+function draw() {
+  const sigma1 = parseFloat(s1El.value);
+  const sigma2 = parseFloat(s2El.value);
+  const phi = parseFloat(phiEl.value);
+  s1v.textContent = fmt(sigma1,2);
+  s2v.textContent = fmt(sigma2,2);
+  phiv.textContent = fmt(deg(phi),1) + '°';
+
+  clearSVG();
+  drawAxes();
+
+  // unit circle
+  circle(cx, cy, scale, {fill:'none', stroke:COL.unit, 'stroke-width':1.7});
+
+  // fixed ellipse A(unit circle)
+  ellipse(cx, cy, scale*sigma1, scale*sigma2, 0, {
+    fill:'none', stroke:COL.image, 'stroke-width':3
+  });
+
+  const [ux, uy] = polar(phi);
+  const ax = sigma1 * ux;
+  const ay = sigma2 * uy;
+  const L = Math.hypot(ax, ay);
+  const areaFactor = sigma1 * sigma2;
+  const b = areaFactor / L;
+  const psi = Math.atan2(ay, ax);
+  const circleRadius = Math.sqrt(areaFactor);
+  const isCircle = Math.abs(L - b) < 0.02;
+  const cosTheta = Math.max(-1, Math.min(1, (ux * ax + uy * ay) / L));
+  const theta = Math.acos(cosTheta);
+  thetav.textContent = fmt(deg(theta), 1) + '°';
+  const phiDeg = deg(phi);
+  const psiDeg = deg(psi);
+
+  // u and Au
+  line(cx, cy, xpix(ux), ypix(uy), {stroke:COL.vector, 'stroke-width':1.8, 'marker-end':'url(#arrow)'});
+  line(cx, cy, xpix(ax), ypix(ay), {stroke:COL.image, 'stroke-width':2.4, 'marker-end':'url(#arrow)'});
+  circle(xpix(ux), ypix(uy), 3.5, {fill:COL.vector});
+  circle(xpix(ax), ypix(ay), 4.4, {fill:COL.image});
+  text(xpix(ux)+8, ypix(uy)-6, 'u', {'font-size':14, fill:COL.vector, 'font-weight':'600'});
+  text(xpix(ax)+8, ypix(ay)-6, 'Au', {'font-size':14, fill:COL.image, 'font-weight':'700'});
+
+  const arcRadius = Math.min(52, Math.max(26, scale * 0.42));
+  arc(cx, cy, arcRadius, psiDeg, phiDeg, {
+    fill: 'none',
+    stroke: '#d85a30',
+    'stroke-width': 2.2
+  });
+  const midDeg = (phiDeg + psiDeg) / 2;
+  text(
+    cx + (arcRadius + 18) * Math.cos(midDeg * Math.PI / 180),
+    cy - (arcRadius + 18) * Math.sin(midDeg * Math.PI / 180),
+    fmt(deg(theta), 1) + '°',
+    {'font-size':16, fill:'#d85a30', 'font-weight':'700'}
+  );
+
+  // dynamic equal-area ellipse T(phi)
+  ellipse(cx, cy, scale*L, scale*b, -psi*180/Math.PI, {
+    fill: isCircle ? 'rgba(10,154,116,0.08)' : COL.familyFill,
+    stroke: isCircle ? COL.circle : COL.family,
+    'stroke-width': isCircle ? 2.4 : 1.9,
+    'stroke-dasharray': isCircle ? '4 4' : '7 5',
+    filter: 'url(#softGlow)'
+  });
+
+  // principal axes of T(phi)
+  const vx = Math.cos(psi), vy = Math.sin(psi);
+  const px = -vy, py = vx;
+  line(xpix(-L*vx), ypix(-L*vy), xpix(L*vx), ypix(L*vy), {
+    stroke:COL.family,'stroke-width':1.2,'stroke-dasharray':'4 4'
+  });
+  line(xpix(-b*px), ypix(-b*py), xpix(b*px), ypix(b*py), {
+    stroke:COL.family,'stroke-width':1.2,'stroke-dasharray':'4 4'
+  });
+
+  // reference circle at special radius sqrt(s1 s2), centered at origin
+  circle(cx, cy, scale*circleRadius, {fill:'none', stroke:COL.circle, 'stroke-width':1.2, 'stroke-dasharray':'2 6'});
+
+  if (isCircle) {
+    text(52, 72, 'circle point', {'font-size':18, fill:COL.circle, 'font-weight':'bold'});
+  }
+}
+
+[s1El, s2El, phiEl].forEach(el => el.addEventListener('input', draw));
+
+draw();
+</script>
+</body>
+</html>

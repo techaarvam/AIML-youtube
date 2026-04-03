@@ -1,0 +1,732 @@
+
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f1e8;
+  --bg-accent: rgba(215, 144, 66, 0.12);
+  --panel: rgba(255, 251, 245, 0.78);
+  --panel-strong: rgba(255, 255, 255, 0.92);
+  --border: rgba(83, 59, 31, 0.12);
+  --shadow: 0 24px 80px rgba(82, 58, 27, 0.12);
+  --text: #1f1a16;
+  --text-muted: #6f655c;
+  --canvas-bg: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,240,230,0.92));
+  --color-background-secondary: #fbf7f1;
+  --color-text-primary: var(--text);
+  --color-text-secondary: var(--text-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171412;
+    --bg-accent: rgba(240, 144, 80, 0.1);
+    --panel: rgba(33, 28, 24, 0.86);
+    --panel-strong: rgba(43, 37, 33, 0.94);
+    --border: rgba(255, 232, 206, 0.09);
+    --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+    --text: #f4ede4;
+    --text-muted: #b0a69a;
+    --canvas-bg: linear-gradient(180deg, rgba(42,37,32,0.96), rgba(28,24,21,0.96));
+    --color-background-secondary: #24201d;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, var(--bg-accent), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(29, 158, 117, 0.09), transparent 24%),
+    var(--bg);
+}
+
+.panel {
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+
+.hero {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, var(--panel-strong), var(--panel));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ba7517;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.25rem, 1.9vw, 1.8rem);
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.hero p {
+  margin: 8px 0 0;
+  max-width: 96ch;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.ctrl-group {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.ctrl-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ctrl-group label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ctrl-group input[type=range] {
+  width: 100%;
+  accent-color: #ba7517;
+}
+
+.val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(186, 117, 23, 0.12);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-bar {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+}
+
+.status-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  min-width: 180px;
+}
+
+.stat strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+#regime-stat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 370px;
+}
+
+.matrix-card {
+  display: grid;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  justify-items: center;
+}
+
+.wide-stat {
+  min-width: 370px;
+}
+
+.matrix-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.matrix-eq {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.matrix-wrap {
+  display: inline-grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.matrix-bracket {
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--text);
+  font-weight: 300;
+}
+
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(64px, auto));
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.matrix-grid span {
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 620px));
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+}
+
+.viz-card {
+  padding: 12px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  width: 100%;
+  max-width: 620px;
+  justify-self: center;
+}
+
+.viz-card h2 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.viz-card p {
+  margin: 0 0 8px;
+  font-size: 0.79rem;
+  color: var(--text-muted);
+}
+
+canvas {
+  width: 100%;
+  height: min(34vh, 320px);
+  min-height: 250px;
+  display: block;
+  border-radius: 18px;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footnote {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.leg span {
+  width: 20px;
+  height: 4px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.tag {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.tag.real { background: #1D9E7522; color: #0F6E56; }
+.tag.complex { background: #D85A3022; color: #993C1D; }
+
+@media (prefers-color-scheme: dark) {
+  .tag.real { background: #1D9E7533; color: #5DCAA5; }
+  .tag.complex { background: #D85A3033; color: #F0997B; }
+}
+
+@media (max-width: 980px) {
+  .controls,
+  .viz-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel {
+    min-height: auto;
+    grid-template-rows: auto;
+  }
+
+  .status-row {
+    justify-content: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel { padding: 12px; }
+  .controls,
+  .viz-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-row {
+    flex-direction: column;
+  }
+
+  .stat,
+  .wide-stat,
+  #regime-stat,
+  .matrix-card {
+    min-width: 0;
+    width: 100%;
+  }
+
+  canvas {
+    height: min(36vh, 280px);
+  }
+}
+</style>
+<div class="panel">
+  <section class="hero">
+    <h1>Interactive Explorer for Eigen Values and Eigen Vectors</h1>
+  </section>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <div class="ctrl-top">
+        <label for="s1">σ₁</label>
+        <span class="val" id="s1v">2.00</span>
+      </div>
+      <input type="range" id="s1" min="0.2" max="2" step="0.05" value="2">
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-top">
+        <label for="s2">σ₂</label>
+        <span class="val" id="s2v">0.10</span>
+      </div>
+      <input type="range" id="s2" min="0.05" max="2" step="0.05" value="0.1">
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-top">
+        <label for="theta">θ (residual)</label>
+        <span class="val" id="thetav">40°</span>
+      </div>
+      <input type="range" id="theta" min="0" max="180" step="1" value="40">
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-top">
+        <label for="phi">φ (base rotation)</label>
+        <span class="val" id="phiv">10°</span>
+      </div>
+      <input type="range" id="phi" min="0" max="360" step="2" value="10">
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-row">
+      <div class="stat matrix-card">
+        <div class="matrix-label">Current matrix A</div>
+        <div class="matrix-eq">A = R(-&phi; + &theta;) diag(&sigma;<sub>1</sub>, &sigma;<sub>2</sub>) R(&phi;)</div>
+        <div class="matrix-wrap" aria-label="Current 2 by 2 matrix A">
+          <span class="matrix-bracket">[</span>
+          <div class="matrix-grid">
+            <span id="a11">—</span>
+            <span id="a12">—</span>
+            <span id="a21">—</span>
+            <span id="a22">—</span>
+          </div>
+          <span class="matrix-bracket">]</span>
+        </div>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="stat" id="regime-stat"></div>
+    </div>
+  </div>
+
+  <div class="viz-grid">
+    <section class="viz-card">
+      <h2>Frame Geometry</h2>
+      <p>V and U bases, residual angle, and eigenvector orientation in the state plane.</p>
+      <canvas id="c-space" height="320"></canvas>
+    </section>
+    <section class="viz-card">
+      <h2>Eigenvalue Plane</h2>
+      <p>The bifurcation path across θ and the current real or complex eigenvalue pair.</p>
+      <canvas id="c-eig" height="320"></canvas>
+    </section>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-row">
+      <div class="stat" id="det-card">det<strong id="det-val">—</strong></div>
+      <div class="stat" id="tr-card">trace<strong id="tr-val">—</strong></div>
+      <div class="stat" id="disc-card">Δ = tr² − 4det<strong id="disc-val">—</strong></div>
+      <div class="stat wide-stat">critical &theta;* = tan⁻¹(√(&sigma;<sub>1</sub>/&sigma;<sub>2</sub>)) − tan⁻¹(√(&sigma;<sub>2</sub>/&sigma;<sub>1</sub>))<strong id="tstar-val">—</strong></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="leg"><span style="background:#1D9E75"></span>V columns v₁, v₂</div>
+    <div class="leg"><span style="background:#378ADD"></span>U columns u₁, u₂</div>
+    <div class="leg"><span style="background:#D85A30"></span>Residual angle θ</div>
+    <div class="leg"><span style="background:#BA7517"></span>Eigenvectors / conjugate locus</div>
+    <div class="leg"><span style="background:#888780"></span>Bifurcation locus for all θ</div>
+  </div>
+
+  <p class="footnote">
+    GM/AM denotes the geometric-to-arithmetic mean ratio of &sigma;<sub>1</sub> and &sigma;<sub>2</sub>. Critical
+    &theta;* uses the current values of &sigma;<sub>1</sub> and &sigma;<sub>2</sub>.
+  </p>
+</div>
+
+<script>
+const PR = window.devicePixelRatio || 1;
+
+// A = U @ Sigma @ V.T
+// U rotates by (phi+theta), V rotates by phi
+function buildMatrix(s1, s2, phi, theta) {
+  const phiR = phi * Math.PI / 180;
+  const phiU = phiR + theta * Math.PI / 180;
+  const cV = Math.cos(phiR), sV = Math.sin(phiR);
+  const cU = Math.cos(phiU), sU = Math.sin(phiU);
+  return [
+    [cU*s1*cV + sU*s2*sV,  cU*s1*sV - sU*s2*cV],
+    [sU*s1*cV - cU*s2*sV,  sU*s1*sV + cU*s2*cV]
+  ];
+}
+
+function eigendecomp(A) {
+  const tr   = A[0][0] + A[1][1];
+  const det  = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+  const disc = tr*tr - 4*det;
+  if (disc >= 0) {
+    const sq = Math.sqrt(disc);
+    return { real:true, l1:(tr+sq)/2, l2:(tr-sq)/2, tr, det, disc };
+  }
+  return { real:false, re:tr/2, im:Math.sqrt(-disc)/2, tr, det, disc };
+}
+
+// Raw eigenvector (arbitrary sign)
+function rawEigvec(A, l) {
+  const a = A[0][0]-l, b = A[0][1];
+  const v = Math.abs(b) > 1e-10 ? [1, -a/b] : [1, 0];
+  const n = Math.sqrt(v[0]*v[0] + v[1]*v[1]);
+  return [v[0]/n, v[1]/n];
+}
+
+// Flip eigenvector sign so that at least one of its angles to v1, v2 is acute.
+// Strategy: pick sign that maximises max(|dot(ev,v1)|, |dot(ev,v2)|) with a POSITIVE dot.
+// Equivalently: compute dot with v1 and v2; the reference that has the largest |dot|
+// tells us the "closest" frame axis. If that dot is negative, flip.
+function orientEigvec(ev, v1x, v1y, v2x, v2y) {
+  const d1 = ev[0]*v1x + ev[1]*v1y;
+  const d2 = ev[0]*v2x + ev[1]*v2y;
+  // which reference is closest?
+  const flip = Math.abs(d1) >= Math.abs(d2) ? (d1 < 0) : (d2 < 0);
+  return flip ? [-ev[0], -ev[1]] : ev;
+}
+
+function resize(cv) {
+  const r = cv.getBoundingClientRect();
+  cv.width = r.width*PR; cv.height = r.height*PR;
+}
+
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const COL = {
+  V:'#1D9E75', U:'#378ADD', theta:'#D85A30', eigen:'#BA7517',
+  bnd: isDark?'#9c9a92':'#888780',
+  grid:isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)',
+  txt: isDark?'#c2c0b6':'#3d3d3a',
+  ax:  isDark?'rgba(255,255,255,0.22)':'rgba(0,0,0,0.20)',
+  real:'#1D9E75', cmplx:'#D85A30'
+};
+
+function arrowTo(ctx,cx,cy,sc, ux,uy, len, col, lw, dash) {
+  const x1=cx+ux*len*sc, y1=cy-uy*len*sc;
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.setLineDash(dash||[]);
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x1,y1); ctx.stroke();
+  const dx=x1-cx, dy=y1-cy, d=Math.sqrt(dx*dx+dy*dy);
+  if(d<1){ctx.restore();return;}
+  const ux2=dx/d, uy2=dy/d;
+  ctx.setLineDash([]); ctx.fillStyle=col;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-10*(ux2+0.36*uy2), y1-10*(uy2-0.36*ux2));
+  ctx.lineTo(x1-10*(ux2-0.36*uy2), y1-10*(uy2+0.36*ux2));
+  ctx.fill(); ctx.restore();
+}
+
+function lbl(ctx,x,y,s,col,align,size) {
+  ctx.save(); ctx.fillStyle=col; ctx.font=(size||11)+'px sans-serif';
+  ctx.textAlign=align||'left'; ctx.textBaseline='middle';
+  ctx.fillText(s,x,y); ctx.restore();
+}
+
+function drawXY(canvas, s1,s2,phi,theta) {
+  resize(canvas);
+  const ctx=canvas.getContext('2d'); ctx.scale(PR,PR);
+  const W=canvas.width/PR, H=canvas.height/PR;
+  const cx=W/2, cy=H/2, sc=Math.min(W,H)*0.44;
+
+  ctx.strokeStyle=COL.grid; ctx.lineWidth=0.5;
+  for(let i=-4;i<=4;i++){
+    ctx.beginPath(); ctx.moveTo(cx+i*sc/2,0); ctx.lineTo(cx+i*sc/2,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,cy+i*sc/2); ctx.lineTo(W,cy+i*sc/2); ctx.stroke();
+  }
+  ctx.strokeStyle=COL.ax; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(8,cy); ctx.lineTo(W-8,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,8); ctx.lineTo(cx,H-8); ctx.stroke();
+
+  const phiR=phi*Math.PI/180, tR=theta*Math.PI/180, phiU=phiR+tR;
+  const VL=0.83;
+
+  // sigma ellipse in V frame
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-phiR);
+  ctx.strokeStyle=isDark?'rgba(255,255,255,0.09)':'rgba(0,0,0,0.08)';
+  ctx.lineWidth=0.8; ctx.setLineDash([2,4]);
+  const escale=sc*0.44/Math.max(s1,s2);
+  ctx.beginPath(); ctx.ellipse(0,0,s1*escale,s2*escale,0,0,2*Math.PI);
+  ctx.stroke(); ctx.restore();
+
+  // V columns
+  const v1x=Math.cos(phiR), v1y=Math.sin(phiR);
+  const v2x=-Math.sin(phiR), v2y=Math.cos(phiR);
+  arrowTo(ctx,cx,cy,sc, v1x,v1y, VL, COL.V, 2);
+  arrowTo(ctx,cx,cy,sc, v2x,v2y, VL, COL.V, 1.2,[4,3]);
+  lbl(ctx, cx+(v1x*VL+0.10)*sc, cy-(v1y*VL)*sc,       'v₁', COL.V,'center',12);
+  lbl(ctx, cx+(v2x*VL-0.02)*sc, cy-(v2y*VL+0.12)*sc,  'v₂', COL.V,'center',12);
+
+  // U columns
+  const u1x=Math.cos(phiU), u1y=Math.sin(phiU);
+  const u2x=-Math.sin(phiU), u2y=Math.cos(phiU);
+  arrowTo(ctx,cx,cy,sc, u1x,u1y, VL, COL.U, 2);
+  arrowTo(ctx,cx,cy,sc, u2x,u2y, VL, COL.U, 1.2,[4,3]);
+  lbl(ctx, cx+(u1x*VL+0.10)*sc, cy-(u1y*VL)*sc,       'u₁', COL.U,'center',12);
+  lbl(ctx, cx+(u2x*VL-0.02)*sc, cy-(u2y*VL+0.12)*sc,  'u₂', COL.U,'center',12);
+
+  // theta arc v1→u1
+  if(tR>0.01) {
+    const arcR=sc*0.31;
+    ctx.save(); ctx.strokeStyle=COL.theta; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(cx,cy,arcR,-phiU,-phiR); ctx.stroke(); ctx.restore();
+    const midA=phiR+tR*0.5;
+    lbl(ctx, cx+arcR*1.45*Math.cos(midA), cy-arcR*1.45*Math.sin(midA), 'θ', COL.theta,'center',13);
+  }
+
+  // phi arc x-axis→v1
+  if(phiR>0.01) {
+    const arcP=sc*0.19;
+    ctx.save(); ctx.strokeStyle=COL.V; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.arc(cx,cy,arcP,-phiR,0); ctx.stroke(); ctx.restore();
+    lbl(ctx, cx+arcP*1.6*Math.cos(phiR/2), cy-arcP*1.6*Math.sin(phiR/2), 'φ', COL.V,'center',11);
+  }
+
+  // eigenvectors with sign fix
+  const A=buildMatrix(s1,s2,phi,theta);
+  const ev=eigendecomp(A);
+  if(ev.real) {
+    let e1=rawEigvec(A,ev.l1);
+    let e2=rawEigvec(A,ev.l2);
+    // orient: each eigvec should have an acute angle with at least one of v1, v2
+    e1 = orientEigvec(e1, v1x,v1y, v2x,v2y);
+    e2 = orientEigvec(e2, v1x,v1y, v2x,v2y);
+    arrowTo(ctx,cx,cy,sc, e1[0],e1[1], VL, COL.eigen,2.5);
+    arrowTo(ctx,cx,cy,sc, e2[0],e2[1], VL, COL.eigen,1.5,[5,3]);
+    lbl(ctx, cx+(e1[0]*VL+0.10)*sc, cy-(e1[1]*VL)*sc, 'ê₁', COL.eigen,'center',12);
+    lbl(ctx, cx+(e2[0]*VL+0.10)*sc, cy-(e2[1]*VL)*sc, 'ê₂', COL.eigen,'center',12);
+  }
+
+  lbl(ctx,W-12,cy-10,'x₁',COL.txt,'center',10);
+  lbl(ctx,cx+10,10,'x₂',COL.txt,'center',10);
+  lbl(ctx,W/2,H-6,'x₁–x₂ space · V, U frames + eigenvectors',COL.txt,'center',11);
+}
+
+function drawEig(canvas, s1,s2,phi,theta) {
+  resize(canvas);
+  const ctx=canvas.getContext('2d'); ctx.scale(PR,PR);
+  const W=canvas.width/PR, H=canvas.height/PR;
+  const cx=W/2, cy=H/2, sc=Math.min(W,H)*0.30;
+
+  ctx.strokeStyle=COL.grid; ctx.lineWidth=0.5;
+  for(let i=-4;i<=4;i++){
+    ctx.beginPath(); ctx.moveTo(cx+i*sc/2,0); ctx.lineTo(cx+i*sc/2,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,cy+i*sc/2); ctx.lineTo(W,cy+i*sc/2); ctx.stroke();
+  }
+  ctx.strokeStyle=COL.ax; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(8,cy); ctx.lineTo(W-8,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,8); ctx.lineTo(cx,H-8); ctx.stroke();
+
+  // bifurcation locus
+  ctx.save(); ctx.strokeStyle=COL.bnd; ctx.lineWidth=0.9; ctx.setLineDash([3,3]);
+  ctx.beginPath(); let first=true;
+  for(let t=0;t<=180;t+=1){
+    const M=buildMatrix(s1,s2,phi,t), e=eigendecomp(M);
+    const rx=e.real?e.l1:e.re, ry=e.real?0:e.im;
+    const px=cx+rx*sc, py=cy-ry*sc;
+    first?(ctx.moveTo(px,py),first=false):ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+  ctx.beginPath(); first=true;
+  for(let t=0;t<=180;t+=1){
+    const M=buildMatrix(s1,s2,phi,t), e=eigendecomp(M);
+    const rx=e.real?e.l2:e.re, ry=e.real?0:-e.im;
+    const px=cx+rx*sc, py=cy-ry*sc;
+    first?(ctx.moveTo(px,py),first=false):ctx.lineTo(px,py);
+  }
+  ctx.stroke(); ctx.restore();
+
+  const A=buildMatrix(s1,s2,phi,theta), ev=eigendecomp(A);
+  if(ev.real) {
+    [[ev.l1,0],[ev.l2,0]].forEach(([re,im],i)=>{
+      ctx.save(); ctx.fillStyle=COL.real;
+      ctx.beginPath(); ctx.arc(cx+re*sc,cy,7,0,2*Math.PI); ctx.fill(); ctx.restore();
+      lbl(ctx, cx+re*sc+10, cy+(i===0?-12:12), 'λ'+(i+1)+'='+re.toFixed(3), COL.real,'left',11);
+    });
+    ctx.save(); ctx.strokeStyle=COL.real; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx+ev.l2*sc,cy); ctx.lineTo(cx+ev.l1*sc,cy); ctx.stroke(); ctx.restore();
+  } else {
+    [[ev.re,ev.im],[ev.re,-ev.im]].forEach(([re,im],i)=>{
+      ctx.save(); ctx.fillStyle=COL.cmplx;
+      ctx.beginPath(); ctx.arc(cx+re*sc,cy-im*sc,7,0,2*Math.PI); ctx.fill(); ctx.restore();
+      const sgn=im>=0?'+':'-';
+      lbl(ctx, cx+re*sc+10, cy-im*sc+(i===0?-12:12),
+          re.toFixed(3)+sgn+Math.abs(im).toFixed(3)+'i', COL.cmplx,'left',11);
+    });
+    ctx.save(); ctx.strokeStyle=COL.cmplx; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx+ev.re*sc,cy-ev.im*sc); ctx.lineTo(cx+ev.re*sc,cy+ev.im*sc); ctx.stroke(); ctx.restore();
+    const mag=Math.sqrt(ev.re*ev.re+ev.im*ev.im);
+    ctx.save(); ctx.strokeStyle=COL.cmplx; ctx.lineWidth=0.8; ctx.setLineDash([2,4]); ctx.globalAlpha=0.4;
+    ctx.beginPath(); ctx.arc(cx,cy,mag*sc,0,2*Math.PI); ctx.stroke(); ctx.restore();
+    lbl(ctx, cx+mag*sc+4, cy-8, '|λ|='+mag.toFixed(3), COL.txt,'left',10);
+  }
+
+  lbl(ctx,W-14,cy-10,'Re(λ)',COL.txt,'center',10);
+  lbl(ctx,cx+10,10,'Im(λ)',COL.txt,'center',10);
+  lbl(ctx,W/2,H-6,'Eigenvalue plane · real ↔ complex bifurcation',COL.txt,'center',11);
+}
+
+function getP(){
+  let s1=+document.getElementById('s1').value;
+  let s2=+document.getElementById('s2').value;
+  if(s1<s2)[s1,s2]=[s2,s1];
+  return{s1,s2,theta:+document.getElementById('theta').value,phi:+document.getElementById('phi').value};
+}
+
+function update(){
+  const{s1,s2,theta,phi}=getP();
+  document.getElementById('s1v').textContent=s1.toFixed(2);
+  document.getElementById('s2v').textContent=s2.toFixed(2);
+  document.getElementById('thetav').textContent=theta+'°';
+  document.getElementById('phiv').textContent=phi+'°';
+
+  const A=buildMatrix(s1,s2,phi,theta), ev=eigendecomp(A);
+  document.getElementById('det-val').textContent=ev.det.toFixed(4);
+  document.getElementById('tr-val').textContent=ev.tr.toFixed(4);
+  document.getElementById('disc-val').textContent=ev.disc.toFixed(4);
+  document.getElementById('a11').textContent=A[0][0].toFixed(4);
+  document.getElementById('a12').textContent=A[0][1].toFixed(4);
+  document.getElementById('a21').textContent=A[1][0].toFixed(4);
+  document.getElementById('a22').textContent=A[1][1].toFixed(4);
+
+  const gm=Math.sqrt(s1*s2), am=(s1+s2)/2, ratio=gm/am;
+  const tstar=Math.acos(Math.min(1,ratio))*180/Math.PI;
+  document.getElementById('tstar-val').textContent=tstar.toFixed(2)+'°';
+
+  const tag=ev.real
+    ?'<span class="tag real">real eigenvalues</span>'
+    :'<span class="tag complex">complex eigenvalues</span>';
+  const cmp=theta>tstar?` θ (${theta}°) > θ* (${tstar.toFixed(1)}°)`
+                       :` θ (${theta}°) ≤ θ* (${tstar.toFixed(1)}°)`;
+  document.getElementById('regime-stat').innerHTML=tag+
+    '<span style="font-size:15px;color:var(--color-text-secondary);margin-left:6px">'+cmp+'</span>';
+
+  drawXY(document.getElementById('c-space'),s1,s2,phi,theta);
+  drawEig(document.getElementById('c-eig'),s1,s2,phi,theta);
+}
+
+['s1','s2','theta','phi'].forEach(id=>document.getElementById(id).addEventListener('input',update));
+window.addEventListener('resize',update);
+update();
+</script>
