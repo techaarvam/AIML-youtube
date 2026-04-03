@@ -25,7 +25,6 @@
     html, body { margin: 0; }
 
     body {
-      min-height: 100vh;
       font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
       color: var(--text);
       background:
@@ -60,6 +59,10 @@
     .embedded .wrap {
       padding: 0 12px 12px;
       gap: 8px;
+    }
+
+    .embedded body {
+      min-height: auto;
     }
 
     .card {
@@ -103,8 +106,8 @@
     .player {
       width: 100%;
       aspect-ratio: 16 / 9;
-      min-height: 320px;
-      max-height: 520px;
+      min-height: 220px;
+      max-height: 360px;
       border: 1px solid var(--border);
       border-radius: 18px;
       overflow: hidden;
@@ -129,7 +132,7 @@
       }
 
       .player {
-        min-height: 240px;
+        min-height: 200px;
       }
     }
   </style>

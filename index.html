@@ -167,6 +167,11 @@
       color: var(--muted);
     }
 
+    .empty[hidden],
+    iframe[hidden] {
+      display: none;
+    }
+
     code {
       background: rgba(0, 0, 0, 0.05);
       padding: 0.1rem 0.3rem;
@@ -299,7 +304,7 @@
       });
 
       if (selected.type === "embed") {
-        viewer.style.height = "720px";
+        viewer.style.height = "420px";
       }
     }
 
@@ -315,7 +320,7 @@
         const nextHeight = Math.max(bodyHeight, htmlHeight, 720);
         viewer.style.height = `${nextHeight}px`;
       } catch (error) {
-        viewer.style.height = "720px";
+        viewer.style.height = "420px";
       }
     }
 
