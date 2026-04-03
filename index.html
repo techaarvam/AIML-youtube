@@ -46,70 +46,37 @@
     }
 
     .title {
-      margin: 0 0 8px;
-      font-size: 2rem;
-      line-height: 1;
+      margin: 0;
+      font-size: 1.4rem;
+      line-height: 1.2;
     }
 
     .subtitle {
-      margin: 0 0 20px;
+      margin: 0;
       color: var(--muted);
       line-height: 1.5;
+    }
+
+    .brand {
+      display: grid;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .brand-link {
+      display: inline-block;
+      width: fit-content;
+    }
+
+    .brand-logo {
+      display: block;
+      width: min(240px, 100%);
+      height: auto;
     }
 
     .list {
       display: grid;
       gap: 10px;
-    }
-
-    .feed {
-      display: grid;
-      gap: 10px;
-      padding-top: 4px;
-    }
-
-    .feed-card {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.78);
-      box-shadow: 0 12px 30px rgba(80, 58, 26, 0.08);
-    }
-
-    .feed-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .feed-title {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 700;
-    }
-
-    .feed-link {
-      color: var(--accent);
-      font-size: 0.82rem;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-
-    .feed-link:hover,
-    .feed-link:focus-visible {
-      text-decoration: underline;
-      outline: none;
-    }
-
-    .feed-frame {
-      width: 100%;
-      height: 420px;
-      border: 0;
-      display: block;
-      background: #fff;
     }
 
     .page-link {
@@ -153,9 +120,6 @@
 
     .content {
       padding: 24px;
-      display: grid;
-      gap: 18px;
-      align-content: start;
     }
 
     .viewer-shell {
@@ -214,23 +178,6 @@
       height: 720px;
     }
 
-    .feed-shell {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.76);
-      box-shadow: 0 20px 60px rgba(80, 58, 26, 0.08);
-    }
-
-    .feed-frame {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      min-height: 420px;
-      border: 0;
-      display: block;
-      background: #fff;
-    }
-
     @media (max-width: 900px) {
       .layout {
         grid-template-columns: 1fr;
@@ -245,17 +192,20 @@
         min-height: 72vh;
       }
 
-      .feed-frame {
-        min-height: 320px;
-      }
     }
   </style>
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <h1 class="title">AIML YouTube</h1>
-      <p class="subtitle"></p>
+      <div class="brand">
+        <a class="brand-link" href="https://techaarvam.com" target="_blank" rel="noopener noreferrer">
+          <img class="brand-logo" src="assets/techaarvam-logo.png" alt="Tech Aarvam">
+        </a>
+        <div>
+          <h1 class="title">Support files for the Tech Aarvam YouTube channel</h1>
+        </div>
+      </div>
       <div id="page-list" class="list"></div>
     </aside>
 
@@ -270,23 +220,6 @@
         </div>
         <div id="empty-state" class="empty"></div>
         <iframe id="viewer" class="viewer-frame" title="HTML preview" hidden></iframe>
-      </section>
-
-      <section class="feed-shell" aria-label="TechAarvam YouTube feed">
-        <div class="feed-card">
-          <div class="feed-head">
-            <h2 class="feed-title">TechAarvam Feed</h2>
-            <a class="feed-link" href="https://www.youtube.com/@TechAarvam" target="_blank" rel="noopener noreferrer">Open Channel</a>
-          </div>
-          <iframe
-            class="feed-frame"
-            title="TechAarvam latest uploads"
-            src="https://www.youtube-nocookie.com/embed/videoseries?list=UU8betmCM4SdWtuSPtRp-aFA"
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-          ></iframe>
-        </div>
       </section>
     </main>
   </div>
@@ -308,11 +241,33 @@
       }
 
       return data.pages
-        .filter((item) => item && typeof item.path === "string" && item.path.endsWith(".html"))
-        .map((item) => ({
-          title: item.title || item.path.replace(/\.html$/i, ""),
-          path: item.path
-        }));
+        .filter((item) => item && typeof item.title === "string")
+        .map((item) => {
+          if (item.type === "embed") {
+            return {
+              type: "embed",
+              title: item.title,
+              path: item.path || item.src || item.url || item.title,
+              src: item.src,
+              url: item.url || item.src
+            };
+          }
+
+          return {
+            type: "html",
+            title: item.title || item.path.replace(/\.html$/i, ""),
+            path: item.path,
+            src: item.path,
+            url: item.path
+          };
+        })
+        .filter((item) => {
+          if (item.type === "embed") {
+            return typeof item.src === "string" && item.src.length > 0;
+          }
+
+          return typeof item.path === "string" && item.path.endsWith(".html");
+        });
     }
 
     function selectPage(path, pages) {
@@ -331,17 +286,21 @@
       nextUrl.searchParams.set("page", selected.path);
       history.replaceState({}, "", nextUrl);
 
-      viewer.src = selected.path;
+      viewer.src = selected.src;
       viewer.hidden = false;
       emptyState.hidden = true;
       viewerTitle.textContent = selected.title;
       viewerMeta.textContent = selected.path;
-      viewerOpen.href = selected.path;
+      viewerOpen.href = selected.url;
       viewerOpen.hidden = false;
 
       document.querySelectorAll(".page-link").forEach((link) => {
         link.classList.toggle("active", link.dataset.path === selected.path);
       });
+
+      if (selected.type === "embed") {
+        viewer.style.height = "720px";
+      }
     }
 
     function resizeViewer() {
