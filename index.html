@@ -239,6 +239,7 @@
     const search = new URLSearchParams(window.location.search);
     const requestedPage = search.get("page");
     let resizeTimer = null;
+    let currentSelectionType = "html";
 
     function normalizePages(data) {
       if (!Array.isArray(data.pages)) {
@@ -291,6 +292,7 @@
       nextUrl.searchParams.set("page", selected.path);
       history.replaceState({}, "", nextUrl);
 
+      currentSelectionType = selected.type;
       viewer.src = selected.src;
       viewer.hidden = false;
       emptyState.hidden = true;
@@ -310,6 +312,11 @@
 
     function resizeViewer() {
       if (viewer.hidden || !viewer.contentWindow) {
+        return;
+      }
+
+      if (currentSelectionType === "embed") {
+        viewer.style.height = "420px";
         return;
       }
 
