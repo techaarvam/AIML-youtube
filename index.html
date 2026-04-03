@@ -185,32 +185,38 @@
     <aside class="sidebar">
       <h1 class="title">AIML YouTube</h1>
       <p class="subtitle">
-        Click any page to open it directly. These demos render more reliably as full standalone pages than inside an embedded iframe.
+        Click any page to render it on the right. Use the direct-open link when you want the standalone page without the launcher.
       </p>
       <div id="page-list" class="list"></div>
       <div class="note">
-        Add future HTML pages by updating <code>pages.json</code>. Old links using <code>?page=...</code> are redirected to the matching HTML page automatically.
+        Add future HTML pages by updating <code>pages.json</code>. The selected page stays in the URL as <code>?page=...</code> so refresh keeps the same selection.
       </div>
     </aside>
 
     <main class="content">
       <section class="viewer-shell">
         <div class="viewer-header">
-          <h2 id="viewer-title" class="viewer-title">Standalone Pages</h2>
-          <div id="viewer-meta" class="viewer-meta"></div>
+          <h2 id="viewer-title" class="viewer-title">No page selected</h2>
+          <div>
+            <a id="viewer-open" class="page-path" href="#" target="_blank" rel="noopener noreferrer" hidden>Open Full Page</a>
+            <div id="viewer-meta" class="viewer-meta"></div>
+          </div>
         </div>
         <div id="empty-state" class="empty">
-          Select a page from the left to open the full interactive demo. This avoids viewport and sizing issues that show up when these pages are embedded.
+          Select a page from the left to render it here.
         </div>
+        <iframe id="viewer" title="HTML preview" hidden></iframe>
       </section>
     </main>
   </div>
 
   <script>
     const pageList = document.getElementById("page-list");
+    const viewer = document.getElementById("viewer");
     const emptyState = document.getElementById("empty-state");
     const viewerTitle = document.getElementById("viewer-title");
     const viewerMeta = document.getElementById("viewer-meta");
+    const viewerOpen = document.getElementById("viewer-open");
     const search = new URLSearchParams(window.location.search);
     const requestedPage = search.get("page");
 
@@ -227,17 +233,33 @@
         }));
     }
 
-    function redirectToPage(path, pages) {
+    function selectPage(path, pages) {
       const selected = pages.find((page) => page.path === path) || pages[0];
 
       if (!selected) {
+        viewer.hidden = true;
         emptyState.hidden = false;
         viewerTitle.textContent = "No page selected";
         viewerMeta.textContent = "";
+        viewerOpen.hidden = true;
         return;
       }
 
-      window.location.replace(selected.path);
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("page", selected.path);
+      history.replaceState({}, "", nextUrl);
+
+      viewer.src = selected.path;
+      viewer.hidden = false;
+      emptyState.hidden = true;
+      viewerTitle.textContent = selected.title;
+      viewerMeta.textContent = selected.path;
+      viewerOpen.href = selected.path;
+      viewerOpen.hidden = false;
+
+      document.querySelectorAll(".page-link").forEach((link) => {
+        link.classList.toggle("active", link.dataset.path === selected.path);
+      });
     }
 
     function renderList(pages) {
@@ -252,15 +274,16 @@
       }
 
       pages.forEach((page) => {
-        const link = document.createElement("a");
-        link.className = "page-link";
-        link.dataset.path = page.path;
-        link.href = page.path;
-        link.innerHTML = `
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "page-link";
+        button.dataset.path = page.path;
+        button.innerHTML = `
           <span class="page-label">${page.title}</span>
           <span class="page-path">${page.path}</span>
         `;
-        pageList.appendChild(link);
+        button.addEventListener("click", () => selectPage(page.path, pages));
+        pageList.appendChild(button);
       });
     }
 
@@ -274,12 +297,11 @@
         const data = await response.json();
         const pages = normalizePages(data);
         renderList(pages);
-        if (requestedPage) {
-          redirectToPage(requestedPage, pages);
-          return;
+        if (pages.length) {
+          selectPage(requestedPage, pages);
+        } else {
+          viewerMeta.textContent = "0 pages available";
         }
-
-        viewerMeta.textContent = `${pages.length} page${pages.length === 1 ? "" : "s"} available`;
       } catch (error) {
         pageList.innerHTML = `<p class="subtitle">${error.message}</p>`;
         viewerTitle.textContent = "Configuration error";
