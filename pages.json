@@ -2,10 +2,7 @@
   "pages": [
     {
       "title": "TechAarvam YouTube Feed",
-      "path": "youtube-feed",
-      "type": "embed",
-      "src": "https://www.youtube-nocookie.com/embed/videoseries?list=UU8betmCM4SdWtuSPtRp-aFA",
-      "url": "https://www.youtube.com/@TechAarvam"
+      "path": "youtube_feed.html"
     },
     {
       "title": "Equal-Area Ellipse Visual",

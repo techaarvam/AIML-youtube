@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TechAarvam YouTube Feed</title>
+  <script>
+    if (window.self !== window.top) {
+      document.documentElement.classList.add('embedded');
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --bg-accent: rgba(27, 131, 106, 0.08);
+      --panel: rgba(255, 251, 245, 0.86);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --border: rgba(79, 57, 30, 0.12);
+      --text: #1d1814;
+      --muted: #6f655c;
+      --shadow: 0 24px 80px rgba(70, 50, 28, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, var(--bg-accent), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(179, 106, 24, 0.06), transparent 24%),
+        var(--bg);
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .brand-link {
+      display: inline-block;
+      width: fit-content;
+    }
+
+    .brand-logo {
+      display: block;
+      width: min(240px, 100%);
+      height: auto;
+    }
+
+    .embedded .brand-link {
+      display: none;
+    }
+
+    .embedded .wrap {
+      padding-top: 0;
+      gap: 12px;
+    }
+
+    .hero,
+    .card {
+      background: linear-gradient(145deg, var(--panel-strong), var(--panel));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero {
+      border-radius: 24px;
+      padding: 18px 20px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.2vw, 2rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 70ch;
+    }
+
+    .card {
+      border-radius: 22px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-head h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .link {
+      color: #b44f2f;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .link:hover,
+    .link:focus-visible {
+      text-decoration: underline;
+      outline: none;
+    }
+
+    .player {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 320px;
+      max-height: 520px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .player iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    @media (max-width: 700px) {
+      .wrap {
+        padding: 12px;
+      }
+
+      .card-head {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .player {
+        min-height: 240px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="brand-link" href="https://techaarvam.com" target="_blank" rel="noopener noreferrer">
+      <img class="brand-logo" src="assets/techaarvam-logo.png" alt="Tech Aarvam">
+    </a>
+
+    <section class="hero">
+      <h1>TechAarvam YouTube Feed</h1>
+      <p>Recent uploads from the channel, embedded in a compact view for quick access from this support page.</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Latest uploads</h2>
+        <a class="link" href="https://www.youtube.com/@TechAarvam" target="_blank" rel="noopener noreferrer">Open Channel</a>
+      </div>
+      <div class="player">
+        <iframe
+          title="TechAarvam latest uploads"
+          src="https://www.youtube-nocookie.com/embed/videoseries?list=UU8betmCM4SdWtuSPtRp-aFA"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
