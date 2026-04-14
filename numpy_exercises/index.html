@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NumPy Dojo — Speed Exercises</title>
+<style>
+:root {
+  --bg: #f3efe6; --panel: #fffaf0; --ink: #1e1d1a; --muted: #6d6659;
+  --line: #d7cfbf; --accent: #b44f2f; --accent-soft: #f3d7cc;
+  --green: #2d7a4f; --green-soft: #d4edda; --red: #c0392b; --red-soft: #fce4e4;
+  --navy: #0f1729; --navy-mid: #1a2744;
+  --cbg: #1e1e2e; --cfg: #cdd6f4; --ckw: #cba6f7; --cstr: #a6e3a1;
+  --cnum: #fab387; --cfn: #89b4fa; --ccm: #6c7086; --cop: #94e2d5;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+[hidden]{display:none!important;}
+
+/* ── INTRO ── */
+#intro{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;background:radial-gradient(ellipse at 60% 30%,#1a2744 0%,#0f1729 70%);color:white;}
+.badge{font-size:3.5rem;margin-bottom:12px;}
+.intro-title{font-size:2.4rem;font-weight:800;color:#f5c07a;margin-bottom:8px;}
+.intro-sub{font-size:1rem;color:#a8b8d8;max-width:540px;line-height:1.6;margin-bottom:28px;}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:680px;margin-bottom:36px;}
+.feat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;font-size:.85rem;color:#c8d4e8;}
+.feat strong{display:block;color:#f5c07a;font-size:1rem;margin-bottom:3px;}
+.btn-p{background:linear-gradient(135deg,#b44f2f,#e06030);color:white;border:none;border-radius:12px;padding:14px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 120ms,box-shadow 120ms;box-shadow:0 4px 18px rgba(180,79,47,.4);}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(180,79,47,.5);}
+.btn-s{background:transparent;color:#a8b8d8;border:1px solid rgba(168,184,216,.3);border-radius:10px;padding:10px 22px;font-size:.9rem;cursor:pointer;transition:color 120ms,border-color 120ms;font-family:inherit;}
+.btn-s:hover{color:white;border-color:rgba(255,255,255,.5);}
+.row-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+/* ── SLIDES ── */
+#slides{min-height:100vh;background:var(--navy);color:white;display:flex;flex-direction:column;}
+.sl-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sl-dots{display:flex;gap:6px;}
+.sl-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.18);transition:background 200ms;}
+.sl-dot.active{background:#f5c07a;}
+.sl-dot.done{background:rgba(255,255,255,.45);}
+.sl-body{flex:1;padding:36px 28px;max-width:900px;margin:0 auto;width:100%;}
+.sl-chip{display:inline-block;background:rgba(245,192,122,.12);color:#f5c07a;border:1px solid rgba(245,192,122,.28);border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.sl-title{font-size:1.9rem;font-weight:800;margin-bottom:6px;line-height:1.2;}
+.sl-sub{font-size:1rem;color:#a8b8d8;margin-bottom:24px;}
+.sl-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+@media(max-width:660px){.sl-grid{grid-template-columns:1fr;} .sl-title{font-size:1.4rem;}}
+.sl-pts{display:grid;gap:10px;}
+.sl-pt{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;color:#c8d4e8;line-height:1.5;}
+.sl-pt-n{flex-shrink:0;width:20px;height:20px;background:rgba(245,192,122,.14);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#f5c07a;font-weight:700;margin-top:2px;}
+.sl-pt code,.ic{background:rgba(255,255,255,.08);color:#89b4fa;padding:1px 5px;border-radius:4px;font-family:'Fira Code',monospace;font-size:.84em;}
+.hi{background:rgba(180,79,47,.1);border:1px solid rgba(180,79,47,.28);border-left:3px solid #b44f2f;border-radius:8px;padding:11px 14px;font-size:.85rem;color:#f3d7cc;line-height:1.5;margin-top:10px;}
+pre.cb{background:var(--cbg);border-radius:10px;padding:16px 18px;font-family:'Fira Code','Cascadia Code','Courier New',monospace;font-size:.82rem;line-height:1.7;overflow-x:auto;color:var(--cfg);white-space:pre;}
+pre.cb .kw{color:var(--ckw);}
+pre.cb .fn{color:var(--cfn);}
+pre.cb .str{color:var(--cstr);}
+pre.cb .num{color:var(--cnum);}
+pre.cb .cm{color:var(--ccm);font-style:italic;}
+pre.cb .op{color:var(--cop);}
+.sl-foot{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.08);}
+.btn-sl{background:rgba(255,255,255,.08);color:white;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:9px 20px;font-size:.9rem;cursor:pointer;transition:background 120ms;font-family:inherit;}
+.btn-sl:hover{background:rgba(255,255,255,.14);}
+.btn-slp{background:linear-gradient(135deg,#b44f2f,#e06030);border-color:transparent;font-weight:600;}
+.btn-slp:hover{opacity:.9;}
+.sl-ctr{color:#a8b8d8;font-size:.85rem;}
+
+/* ── GAME ── */
+#game{min-height:100vh;background:var(--bg);padding-bottom:40px;}
+.g-hdr{background:var(--navy);color:white;padding:12px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.g-hdr-left{flex:1;min-width:0;}
+.g-topic{font-size:.7rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.g-qlbl{font-size:.95rem;font-weight:700;color:#f5c07a;}
+.g-stats{display:flex;align-items:center;gap:16px;}
+.sbox{text-align:center;}
+.slbl{font-size:.65rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.06em;}
+.sval{font-size:1.3rem;font-weight:800;color:#f5c07a;line-height:1;}
+.cbox{background:rgba(245,192,122,.08);border:1px solid rgba(245,192,122,.25);border-radius:8px;padding:5px 10px;text-align:center;min-width:64px;transition:background 300ms,border-color 300ms;}
+.cbox.hot{background:rgba(245,192,122,.22);border-color:#f5c07a;}
+.clbl{font-size:.6rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.06em;}
+.cval{font-size:.95rem;font-weight:700;color:#f5c07a;}
+.tw{position:relative;width:52px;height:52px;flex-shrink:0;}
+.tr{transform:rotate(-90deg);width:52px;height:52px;}
+.t-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:4;}
+.t-fill{fill:none;stroke:#2d7a4f;stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke 600ms;}
+.t-fill.warn{stroke:#f39c12;}
+.t-fill.danger{stroke:#c0392b;}
+.t-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:.9rem;font-weight:800;color:white;}
+.prog-wrap{height:4px;background:var(--line);}
+.prog-fill{height:100%;background:linear-gradient(90deg,#b44f2f,#e06030);transition:width 300ms ease;}
+.q-area{max-width:780px;margin:28px auto;padding:0 22px;}
+.t-chip{display:inline-block;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(180,79,47,.18);border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.q-card{background:white;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 4px 22px rgba(80,58,26,.07);}
+.q-text{font-size:1.05rem;line-height:1.6;font-weight:600;margin-bottom:14px;color:var(--ink);}
+pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family:'Fira Code','Cascadia Code',monospace;font-size:.82rem;line-height:1.6;color:var(--cfg);margin-bottom:18px;overflow-x:auto;white-space:pre;}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+@media(max-width:560px){.opts{grid-template-columns:1fr;}}
+.opt{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;cursor:pointer;font-size:.88rem;color:var(--ink);font-family:inherit;transition:border-color 120ms,background 120ms,transform 80ms;line-height:1.4;}
+.opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft);transform:translateY(-1px);}
+.opt:disabled{cursor:default;}
+.opt.correct{background:#d4edda;border-color:#2d7a4f;color:#1a4d2e;}
+.opt.wrong{background:#fce4e4;border-color:#c0392b;color:#7b1414;}
+.opt.reveal{background:#fff9e6;border-color:#f39c12;}
+.o-ltr{display:inline-block;width:20px;height:20px;background:var(--line);border-radius:5px;text-align:center;line-height:20px;font-size:.7rem;font-weight:700;margin-right:7px;vertical-align:middle;flex-shrink:0;}
+.expl{margin-top:14px;background:#f0f7ff;border:1px solid #bee3ff;border-left:3px solid #3498db;border-radius:8px;padding:10px 14px;font-size:.86rem;color:#1a3a5c;line-height:1.5;display:none;}
+.expl.show{display:block;}
+.next-row{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:none;}
+.q-ctr{font-size:.82rem;color:var(--muted);}
+.pp{position:fixed;top:74px;right:22px;background:var(--navy);color:#f5c07a;border-radius:10px;padding:10px 18px;font-size:1.1rem;font-weight:800;box-shadow:0 4px 18px rgba(0,0,0,.3);transform:translateY(-8px);opacity:0;transition:transform 280ms,opacity 280ms;pointer-events:none;z-index:100;}
+.pp.show{transform:translateY(0);opacity:1;}
+
+/* ── END ── */
+#end{min-height:100vh;background:radial-gradient(ellipse at 60% 30%,#1a2744 0%,#0f1729 70%);color:white;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:44px 22px;}
+.end-trophy{font-size:3.5rem;margin-bottom:12px;}
+.end-title{font-size:2rem;font-weight:800;color:#f5c07a;margin-bottom:6px;}
+.end-score{font-size:3.2rem;font-weight:900;color:white;margin-bottom:2px;}
+.end-slbl{font-size:.9rem;color:#a8b8d8;margin-bottom:26px;}
+.rank{display:inline-block;padding:7px 22px;border-radius:22px;font-size:1rem;font-weight:700;margin-bottom:26px;}
+.rank-s{background:linear-gradient(135deg,#f5c07a,#e06030);color:#1a1a1a;}
+.rank-a{background:linear-gradient(135deg,#a8e6cf,#2d7a4f);color:#1a1a1a;}
+.rank-b{background:rgba(245,192,122,.14);border:1px solid rgba(245,192,122,.38);color:#f5c07a;}
+.rank-c{background:rgba(168,184,216,.1);border:1px solid rgba(168,184,216,.28);color:#a8b8d8;}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;max-width:660px;width:100%;margin-bottom:28px;}
+.rc{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;text-align:center;}
+.rc-v{font-size:1.5rem;font-weight:800;color:#f5c07a;}
+.rc-l{font-size:.75rem;color:#a8b8d8;margin-top:3px;}
+.missed-list{max-width:660px;width:100%;margin-bottom:22px;}
+.mi{background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.18);border-radius:10px;padding:10px 14px;margin-bottom:7px;font-size:.82rem;color:#e0c0bc;}
+.mi strong{display:block;color:white;margin-bottom:3px;}
+.mi-ans{color:#a6e3a1;font-size:.8rem;margin-top:3px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fadeUp 240ms ease forwards;}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="badge">🥋</div>
+  <h1 class="intro-title">NumPy Dojo</h1>
+  <p class="intro-sub">Master NumPy through speed challenges. Think in tensors, not loops — the foundation every ML engineer needs.</p>
+  <div class="feats">
+    <div class="feat"><strong>10 Slides</strong>Core concepts with real code</div>
+    <div class="feat"><strong>45 Exercises</strong>Arrays → linalg → broadcasting</div>
+    <div class="feat"><strong>Timer Scoring</strong>Speed earns bonus points</div>
+    <div class="feat"><strong>PyTorch Ready</strong>Every pattern maps forward</div>
+  </div>
+  <div class="row-btns">
+    <button class="btn-p" onclick="startSlides()">Start Learning ▶</button>
+    <button class="btn-s" onclick="skipToGame()">Skip to Game ⚡</button>
+  </div>
+</div>
+
+<!-- SLIDES -->
+<div id="slides" hidden>
+  <div class="sl-nav">
+    <div class="sl-dots" id="sl-dots"></div>
+    <button class="btn-s" onclick="skipToGame()" style="font-size:.82rem;padding:7px 16px;">Skip to Game ⚡</button>
+  </div>
+  <div class="sl-body" id="sl-body"></div>
+  <div class="sl-foot">
+    <button class="btn-sl" id="btn-prev" onclick="prevSlide()">← Back</button>
+    <span class="sl-ctr" id="sl-ctr"></span>
+    <button class="btn-sl btn-slp" id="btn-next" onclick="nextSlide()">Next →</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" hidden>
+  <div class="g-hdr">
+    <div class="g-hdr-left">
+      <div class="g-topic" id="g-topic"></div>
+      <div class="g-qlbl" id="g-qlbl"></div>
+    </div>
+    <div class="g-stats">
+      <div class="sbox"><div class="slbl">Score</div><div class="sval" id="g-score">0</div></div>
+      <div class="cbox" id="g-cbox"><div class="clbl">Combo</div><div class="cval" id="g-combo">×1</div></div>
+      <div class="tw">
+        <svg class="tr" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="22" class="t-track"/>
+          <circle cx="26" cy="26" r="22" class="t-fill" id="t-fill"/>
+        </svg>
+        <span class="t-txt" id="t-txt">20</span>
+      </div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+  <div class="q-area">
+    <div class="t-chip" id="q-chip"></div>
+    <div class="q-card anim" id="q-card">
+      <div class="q-text" id="q-text"></div>
+      <pre class="q-code" id="q-code" style="display:none;"></pre>
+      <div class="opts" id="opts"></div>
+      <div class="expl" id="expl"></div>
+      <div class="next-row" id="next-row">
+        <span class="q-ctr" id="q-ctr"></span>
+        <button class="btn-p" onclick="nextQ()" style="padding:9px 22px;font-size:.9rem;">Next →</button>
+      </div>
+    </div>
+  </div>
+  <div class="pp" id="pp"></div>
+</div>
+
+<!-- END -->
+<div id="end" hidden>
+  <div class="end-trophy" id="end-trophy">🏆</div>
+  <h1 class="end-title" id="end-ttl">Dojo Complete!</h1>
+  <div class="end-score" id="end-score">0</div>
+  <div class="end-slbl">Total Points</div>
+  <div class="rank" id="end-rank">Rank B</div>
+  <div class="res-grid">
+    <div class="rc"><div class="rc-v" id="r-correct">0</div><div class="rc-l">Correct</div></div>
+    <div class="rc"><div class="rc-v" id="r-acc">0%</div><div class="rc-l">Accuracy</div></div>
+    <div class="rc"><div class="rc-v" id="r-combo">×1</div><div class="rc-l">Best Combo</div></div>
+    <div class="rc"><div class="rc-v" id="r-speed">0s</div><div class="rc-l">Avg Speed</div></div>
+  </div>
+  <div class="missed-list" id="missed-wrap"></div>
+  <div class="row-btns">
+    <button class="btn-p" onclick="restartGame()">Play Again ↺</button>
+    <button class="btn-s" onclick="reviewSlides()">Review Slides 📖</button>
+  </div>
+</div>
+
+<script>
+// ── SLIDE DATA ──────────────────────────────────────────────────────────────
+const SLIDES = [
+{n:"01",title:"Why NumPy?",sub:"The No-Loop Manifesto",
+ pts:["NumPy arrays are N-dimensional tensors — the core data structure for all of ML/AI.",
+      "Vectorized operations run in compiled C/Fortran — <strong>100–1000× faster</strong> than Python loops.",
+      "Rule&nbsp;#1: <strong>If you're writing a for loop, there's probably a better NumPy way.</strong>",
+      "Every pattern here maps directly to <code>torch.Tensor</code> in PyTorch.",
+      "Thinking in <em>shapes</em> and <em>axes</em> is the core mental model of deep learning."],
+ code:`<span class="cm"># Slow — avoid this in production ML code</span>
+result = []
+<span class="kw">for</span> i <span class="kw">in</span> range(n):
+    result.append(a[i] * b[i])
+
+<span class="cm"># Fast — one C-level operation</span>
+result = a * b   <span class="cm"># vectorized!</span>`,
+ hi:"Goal: stop writing loops, start writing expressions. Shape-first thinking → PyTorch fluency."},
+
+{n:"02",title:"Array Creation",sub:"The building blocks",
+ pts:["<code>np.array([1,2,3])</code> — from a Python list",
+      "<code>np.zeros((m, n))</code> — m×n matrix of zeros",
+      "<code>np.ones((m, n))</code> — m×n matrix of ones",
+      "<code>np.eye(n)</code> — n×n identity matrix (1s on diagonal)",
+      "<code>np.arange(start, stop, step)</code> — like Python range, excludes stop",
+      "<code>np.linspace(start, stop, num)</code> — num evenly-spaced points <em>including</em> stop",
+      "<code>np.zeros_like(A)</code> — zeros with same shape/dtype as A"],
+ code:`A = <span class="fn">np.zeros</span>((3, 4))       <span class="cm"># shape (3,4)</span>
+I = <span class="fn">np.eye</span>(4)             <span class="cm"># 4×4 identity</span>
+v = <span class="fn">np.arange</span>(0, 10, 2)   <span class="cm"># [0 2 4 6 8]</span>
+t = <span class="fn">np.linspace</span>(0, 1, 5)  <span class="cm"># [0. .25 .5 .75 1.]</span>`,
+ hi:"Note: np.zeros() takes a single tuple. np.zeros(m, n) raises a TypeError!"},
+
+{n:"03",title:"Shapes & Reshaping",sub:"Think in dimensions",
+ pts:["<code>A.shape</code> — always a tuple, e.g. <code>(3, 4)</code> or <code>(2, 3, 4)</code>",
+      "<code>A.ndim</code> — number of axes/dimensions",
+      "<code>A.reshape(m, n)</code> — change shape without copying data",
+      "Use <code>-1</code> in reshape to let NumPy infer one dimension",
+      "<code>A.flatten()</code> — 1D copy; <code>A.ravel()</code> — 1D view when possible",
+      "<code>A[:, np.newaxis]</code> or <code>A[:, None]</code> — insert a new axis"],
+ code:`A = <span class="fn">np.zeros</span>((12,))
+B = A.<span class="fn">reshape</span>(3, 4)     <span class="cm"># (3,4)</span>
+C = A.<span class="fn">reshape</span>(-1, 4)    <span class="cm"># same — infer rows</span>
+D = A.<span class="fn">reshape</span>(2, -1, 2)  <span class="cm"># (2,3,2)</span>
+
+v = <span class="fn">np.array</span>([1,2,3])    <span class="cm"># (3,)</span>
+col = v[:, <span class="fn">np.newaxis</span>]   <span class="cm"># (3,1) column vec</span>`,
+ hi:"In PyTorch: tensor.reshape(), tensor.view(), tensor.unsqueeze() do these same jobs."},
+
+{n:"04",title:"Indexing & Slicing",sub:"Navigate your data",
+ pts:["<code>A[row, col]</code> — single element (prefer over A[row][col])",
+      "<code>A[:, 2]</code> — all rows, column 2 only",
+      "<code>A[1:3, :]</code> — rows 1 and 2 (stop is exclusive)",
+      "<code>A[::2, :]</code> — every other row (0, 2, 4, ...)",
+      "<code>A[-1, :]</code> — last row (negative indexing counts from end)",
+      "<code>A[[0,2,4], :]</code> — specific rows by list (fancy indexing)"],
+ code:`<span class="cm"># Set rows 1,3,5,... and cols 3–18 to zero</span>
+A[<span class="num">1</span>::<span class="num">2</span>, <span class="num">3</span>:<span class="num">19</span>] = <span class="num">0</span>
+
+<span class="cm"># Set exactly rows [2,4], cols 3–18</span>
+A[[<span class="num">2</span>, <span class="num">4</span>], <span class="num">3</span>:<span class="num">19</span>] = <span class="num">0</span>
+
+<span class="cm"># Get upper-left 3×3 block</span>
+block = A[:<span class="num">3</span>, :<span class="num">3</span>]`,
+ hi:"A[rows, cols] assigns in-place — no loop needed to init specific regions of a matrix!"},
+
+{n:"05",title:"Boolean & Fancy Indexing",sub:"Conditional selection",
+ pts:["<code>A &gt; 0</code> — creates a boolean mask, same shape as A",
+      "<code>A[A &gt; 0]</code> — returns 1D array of matching elements",
+      "<code>np.where(cond, x, y)</code> — vectorized if-else",
+      "<code>A[(A &gt; 0) &amp; (A &lt; 5)]</code> — combine with <code>&amp;</code> and <code>|</code> (not <code>and</code>/<code>or</code>!)",
+      "<code>np.sum(A &gt; 3)</code> — count elements &gt; 3 (booleans are 0/1)",
+      "<code>np.clip(A, 0, 1)</code> — clamp values to [0, 1]"],
+ code:`<span class="cm"># ReLU — the most used activation in deep learning</span>
+relu = <span class="fn">np.where</span>(A &gt; <span class="num">0</span>, A, <span class="num">0</span>)
+relu = A * (A &gt; <span class="num">0</span>)   <span class="cm"># also works!</span>
+
+<span class="cm"># Count and filter</span>
+n_pos = <span class="fn">np.sum</span>(A &gt; <span class="num">0</span>)
+A_pos = <span class="fn">np.clip</span>(A, <span class="num">0</span>, None)  <span class="cm"># same as ReLU</span>`,
+ hi:"In PyTorch: torch.where(), F.relu(), tensor.clamp() are the direct equivalents."},
+
+{n:"06",title:"Random Generation",sub:"The right way with rng",
+ pts:["<strong>Avoid old-style:</strong> <code>np.random.rand()</code>, <code>np.random.randn()</code>",
+      "<strong>Modern way:</strong> <code>rng = np.random.default_rng(seed=42)</code>",
+      "<code>rng.random((m, n))</code> — uniform [0,&nbsp;1), takes a tuple shape",
+      "<code>rng.standard_normal((m, n))</code> — N(0, 1)",
+      "<code>rng.integers(0, 10, size=(m, n))</code> — ints in [0, 9]",
+      "Range [−0.5, 0.5): <code>rng.random((m, n)) − 0.5</code>"],
+ code:`rng = <span class="fn">np.random.default_rng</span>(seed=<span class="num">42</span>)
+
+U = rng.<span class="fn">random</span>((<span class="num">100</span>, <span class="num">100</span>))       <span class="cm"># [0,1)</span>
+N = rng.<span class="fn">standard_normal</span>((<span class="num">3</span>, <span class="num">4</span>))  <span class="cm"># N(0,1)</span>
+I = rng.<span class="fn">integers</span>(<span class="num">0</span>, <span class="num">10</span>, (<span class="num">5</span>, <span class="num">5</span>))  <span class="cm"># [0,9]</span>
+
+<span class="cm"># Centered: shift [0,1) → [-0.5, 0.5)</span>
+W = rng.<span class="fn">random</span>((<span class="num">512</span>, <span class="num">512</span>)) - <span class="num">0.5</span>`,
+ hi:"rng.random() takes a shape tuple like (3,4) — not two separate ints like MATLAB's rand(3,4)."},
+
+{n:"07",title:"Linear Algebra",sub:"The linalg toolkit",
+ pts:["<code>A @ B</code> — matrix multiply (use this, not <code>np.dot</code>!)",
+      "<code>A * B</code> — element-wise Hadamard product",
+      "<code>A.T</code> — transpose (no parentheses needed!)",
+      "<code>np.linalg.det(A)</code> — determinant",
+      "<code>np.linalg.inv(A)</code> — matrix inverse",
+      "<code>np.linalg.solve(A, b)</code> — solve Ax=b (prefer over inv!)",
+      "<code>np.linalg.eigvals(A)</code> — eigenvalues only"],
+ code:`C = A <span class="op">@</span> B               <span class="cm"># matrix product</span>
+D = A <span class="op">*</span> B               <span class="cm"># element-wise</span>
+AT = A.T                 <span class="cm"># transpose</span>
+<span class="fn">np.linalg.det</span>(A)        <span class="cm"># scalar</span>
+<span class="fn">np.linalg.inv</span>(A)        <span class="cm"># matrix</span>
+x = <span class="fn">np.linalg.solve</span>(A, b) <span class="cm"># ← prefer this</span>`,
+ hi:"Always use np.linalg.solve(A,b) over inv(A)@b — it's faster and numerically more stable."},
+
+{n:"08",title:"Aggregations & Stats",sub:"Reduce along axes",
+ pts:["<code>A.mean()</code> — mean of all elements (scalar)",
+      "<code>A.mean(axis=0)</code> — mean of each column (collapse rows)",
+      "<code>A.mean(axis=1)</code> — mean of each row (collapse columns)",
+      "<code>A.std()</code>, <code>A.sum()</code>, <code>A.max()</code>, <code>A.min()</code>",
+      "<code>keepdims=True</code> — preserve the collapsed dim as size&nbsp;1",
+      "Z-score normalize: <code>(A − A.mean()) / A.std()</code>"],
+ code:`A = rng.<span class="fn">standard_normal</span>((<span class="num">100</span>, <span class="num">10</span>))
+A.<span class="fn">mean</span>()               <span class="cm"># scalar</span>
+A.<span class="fn">mean</span>(axis=<span class="num">0</span>)         <span class="cm"># shape (10,)</span>
+A.<span class="fn">mean</span>(axis=<span class="num">1</span>)         <span class="cm"># shape (100,)</span>
+<span class="cm"># Per-feature normalization</span>
+A_n = (A - A.<span class="fn">mean</span>(axis=<span class="num">0</span>)) / A.<span class="fn">std</span>(axis=<span class="num">0</span>)`,
+ hi:"axis=0 collapses rows; axis=1 collapses columns. Mnemonic: the axis you name disappears."},
+
+{n:"09",title:"Broadcasting",sub:"Operations on compatible shapes",
+ pts:["Arrays with compatible shapes combine without copying data.",
+      "Rule: trailing dimensions must match, or be 1.",
+      "<code>(3,4) + (4,)</code> → OK, <code>(4,)</code> broadcasts to <code>(3,4)</code>",
+      "<code>(3,1) + (1,4)</code> → <code>(3,4)</code> — both dimensions broadcast",
+      "<code>(3,4) + (3,)</code> → <strong>ERROR</strong> — trailing dim 3 ≠ 4",
+      "Use <code>keepdims=True</code> so result shapes align for broadcasting"],
+ code:`A = <span class="fn">np.zeros</span>((<span class="num">3</span>, <span class="num">4</span>))
+b = <span class="fn">np.array</span>([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>])      <span class="cm"># (4,)</span>
+C = A + b     <span class="cm"># (3,4) — broadcasts!</span>
+
+<span class="cm"># Center each row (keepdims keeps (100,1))</span>
+mu = A.<span class="fn">mean</span>(axis=<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+A_c = A - mu   <span class="cm"># (3,4)-(3,1) → (3,4)</span>`,
+ hi:"Broadcasting avoids copies and explicit loops — it's the secret behind efficient batch ops in PyTorch."},
+
+{n:"10",title:"The PyTorch Connection",sub:"You're almost there",
+ pts:["NumPy → PyTorch is mostly a namespace swap:",
+      "<code>np.array()</code> → <code>torch.tensor()</code>",
+      "<code>A @ B</code> → identical in PyTorch!",
+      "<code>A.T</code> → <code>A.T</code> or <code>A.transpose(0,1)</code>",
+      "<code>np.linalg.*</code> → <code>torch.linalg.*</code>",
+      "Key addition: <strong>autograd</strong> — PyTorch tracks gradients through every op you already know."],
+ code:`<span class="cm"># NumPy forward pass</span>
+W = rng.<span class="fn">standard_normal</span>((<span class="num">128</span>, <span class="num">64</span>))
+out = <span class="fn">np.maximum</span>(<span class="num">0</span>, X <span class="op">@</span> W.T)
+
+<span class="cm"># PyTorch — almost identical!</span>
+W = torch.<span class="fn">randn</span>(<span class="num">128</span>, <span class="num">64</span>, requires_grad=<span class="kw">True</span>)
+out = torch.<span class="fn">relu</span>(X <span class="op">@</span> W.T)  <span class="cm"># grad tracked!</span>`,
+ hi:"You've built the mental model. In PyTorch, tensors are just NumPy arrays + gradient tracking."},
+];
+
+// ── QUESTION DATA ───────────────────────────────────────────────────────────
+const QS = [
+// --- Array Creation ---
+{t:"Array Creation",
+ q:"Which call creates a 3×4 matrix of all zeros?",
+ opts:["np.zeros(3, 4)","np.zeros((3, 4))","np.zero((3,4))","np.zeros([3][4])"],
+ a:1, ex:"np.zeros() takes a single shape tuple. np.zeros(3,4) is a TypeError — second arg is dtype, not columns."},
+{t:"Array Creation",
+ q:"np.eye(4) creates a...",
+ opts:["4-element array of ones","4×4 identity matrix","4×4 matrix filled with 4","4 eye-shaped sub-arrays"],
+ a:1, ex:"np.eye(n) makes an n×n identity matrix — 1s on diagonal, 0s elsewhere. Foundation for Ax=b thinking."},
+{t:"Array Creation",
+ q:"np.arange(0, 10, 2) produces:",
+ opts:["[0, 2, 4, 6, 8, 10]","[0, 2, 4, 6, 8]","[2, 4, 6, 8]","[0, 2, 4, 6, 8, 9]"],
+ a:1, ex:"arange(start, stop, step) excludes stop. 0,2,4,6,8 — five values before reaching 10."},
+{t:"Array Creation",
+ q:"np.linspace(0, 1, 5) returns:",
+ opts:["[0.0, 0.25, 0.5, 0.75]","[0.0, 0.25, 0.5, 0.75, 1.0]","[0, 0.2, 0.4, 0.6, 0.8, 1.0]","[0.0, 0.5, 1.0, 1.5, 2.0]"],
+ a:1, ex:"linspace(start, stop, num) is inclusive of stop and creates exactly num points."},
+{t:"Array Creation",
+ q:"A = np.ones((2, 3, 4)). What is A.ndim?",
+ opts:["2","3","4","24"],
+ a:1, ex:"ndim counts the number of axes. Shape (2,3,4) has 3 dimensions."},
+{t:"Array Creation",
+ q:"You have a flat 12-element array v. How do you reshape it to shape (3, 4)?",
+ opts:["v.reshape[3, 4]","v.reshape(3, 4)","np.reshape(3, 4, v)","v.shape = (3, 4)"],
+ a:1, ex:"reshape() is a method called with positional args for each dimension, or a single tuple."},
+{t:"Array Creation",
+ q:"What does np.zeros_like(A) return?",
+ opts:["A copy of A","Zeros with A's shape and dtype","A zero scalar","np.zeros((A.ndim,))"],
+ a:1, ex:"zeros_like() mirrors shape and dtype of the argument, but fills with zeros. Useful for initializing weight matrices."},
+{t:"Array Creation",
+ q:"What does the -1 mean in A.reshape(-1, 4)?",
+ opts:["Reverse the array","Infer that dimension from total elements","Use -1 as a padding value","Keep the original last axis"],
+ a:1, ex:"Passing -1 tells NumPy: 'you figure out this dimension.' If A has 12 elements, reshape(-1,4) → (3,4)."},
+
+// --- Indexing & Slicing ---
+{t:"Indexing & Slicing",
+ q:"A is shape (5, 6). How do you select all rows, column 2 only?",
+ opts:["A[2]","A[:, 2]","A[2, :]","A[*, 2]"],
+ a:1, ex:"A[:, 2] means 'all rows (:), column index 2'. A[2, :] would give you all of row 2."},
+{t:"Indexing & Slicing",
+ q:"How do you get rows 1 and 2 (not row 3) from matrix A?",
+ opts:["A[1:3, :]","A[1:2, :]","A[1,2, :]","A[[1,2,3], :]"],
+ a:0, ex:"Python slicing is exclusive on the right: A[1:3] gives indices 1 and 2. A[1:2] gives only index 1."},
+{t:"Indexing & Slicing",
+ q:"How do you get every other row (0, 2, 4, ...) from A?",
+ opts:["A[0,2,4, :]","A[even, :]","A[::2, :]","A[0::1, :]"],
+ a:2, ex:"A[::2, :] uses step=2. The slice syntax is start:stop:step. No start/stop means 'from beginning to end'."},
+{t:"Indexing & Slicing",
+ q:"How do you get the last row of A without knowing its size?",
+ opts:["A[last, :]","A[-1, :]","A[end, :]","A[A.shape[0]-1]"],
+ a:1, ex:"Negative indices count from the end. A[-1] is the last row. Cleaner than A[A.shape[0]-1]."},
+{t:"Indexing & Slicing",
+ q:"How do you set rows 1, 3, 5,… and columns 3 to 18 to zero (in one line, no loop)?",
+ code:`A[?, 3:19] = 0`,
+ opts:["A[1,3,5, 3:19] = 0","A[1::2, 3:18] = 0","A[1::2, 3:19] = 0","A[odd, 3:18] = 0"],
+ a:2, ex:"A[1::2, 3:19] — slice 1::2 gives odd indices; 3:19 gives cols 3..18 (19 excluded). Cols: 3,4,...,18."},
+{t:"Indexing & Slicing",
+ q:"A[[0, 2, 4], :] is an example of:",
+ opts:["Boolean indexing","Fancy (integer-array) indexing","Slice indexing","View indexing"],
+ a:1, ex:"Passing a list of integers is called fancy indexing — it selects specific rows by position. Very common in ML data loading."},
+{t:"Indexing & Slicing",
+ q:"A is (10, 20). A[2:8:2, 5:15] selects which rows and columns?",
+ opts:["Rows 2,4,6,8 and cols 5-15","Rows 2,4,6 and cols 5-14","Rows 2,4,6 and cols 5-15","Rows 2,4,6,8 and cols 5-14"],
+ a:1, ex:"2:8:2 = [2,4,6] (stop 8 excluded). 5:15 = cols [5..14] (stop 15 excluded)."},
+{t:"Indexing & Slicing",
+ q:"You want to assign the same values to rows 2 and 4, cols 3–18. Which approach works without a for loop?",
+ code:`# rows 2 and 4, cols 3 to 18`,
+ opts:["A[[2,4], 3:19] = vals","A[2:5:2, 3:19] = vals","Both A and B work","Neither — a loop is required"],
+ a:2, ex:"Both work! A[[2,4], 3:19] uses fancy indexing; A[2:5:2, 3:19] uses a step-2 slice from 2 to 4. No loop needed."},
+
+// --- Boolean Indexing ---
+{t:"Boolean Indexing",
+ q:"Which expression implements ReLU (replace negatives with 0) on array A?",
+ opts:["A[A > 0]","np.where(A > 0, A, 0)","A.relu()","np.relu(A)"],
+ a:1, ex:"np.where(cond, x, y) returns x where cond is True, y elsewhere. Note: A*(A>0) also works! No for loop needed."},
+{t:"Boolean Indexing",
+ q:"How do you select elements of A that are between 0 and 5 (exclusive)?",
+ opts:["A[0 < A < 5]","A[(A > 0) & (A < 5)]","A[(A > 0) and (A < 5)]","A[A.between(0, 5)]"],
+ a:1, ex:"Use & for element-wise AND on arrays. Python's 'and' raises an error on multi-element arrays."},
+{t:"Boolean Indexing",
+ q:"np.where(A > 0, 1, -1) does what?",
+ opts:["Returns indices where A > 0","Returns +1 where A>0, -1 elsewhere","Returns A clipped to [-1, 1]","Raises TypeError"],
+ a:1, ex:"np.where(cond, x, y) → vectorized sign function. This pattern appears everywhere in loss functions."},
+{t:"Boolean Indexing",
+ q:"How do you count the number of elements in A that are greater than 3?",
+ opts:["len(A[A > 3])","np.count(A > 3)","np.sum(A > 3)","A.count(A > 3)"],
+ a:2, ex:"Boolean arrays are 0/1 integers. np.sum(A > 3) elegantly sums up all the True (=1) values."},
+{t:"Boolean Indexing",
+ q:"np.clip(A, 0, 1) does what?",
+ opts:["Removes values outside [0,1]","Clamps values: below 0→0, above 1→1","Rescales A to [0,1]","Returns True where A is in [0,1]"],
+ a:1, ex:"clip() saturates values at the bounds. Values in range are unchanged. Equivalent to torch.clamp() in PyTorch."},
+
+// --- Random Generation ---
+{t:"Random Generation",
+ q:"What is the modern NumPy way to create a reproducible random generator?",
+ opts:["np.random.seed(42)","rng = np.random.default_rng(seed=42)","np.random.RandomState(42)","random.seed(42)"],
+ a:1, ex:"default_rng() returns a Generator object — the modern API since NumPy 1.17. Reproducible, thread-safe, and cleaner."},
+{t:"Random Generation",
+ q:"rng.random((3, 4)) generates:",
+ opts:["3 random numbers in range [0,4)","A 3×4 uniform random matrix in [0,1)","3 or 4 random numbers","A 3×4 matrix of random integers"],
+ a:1, ex:"rng.random(shape) generates uniform floats in [0,1) with the given shape tuple. Shape first, always."},
+{t:"Random Generation",
+ q:"How do you generate a 100×100 matrix of uniform randoms in [−0.5, 0.5)?",
+ opts:["rng.random((100,100)) * 0.5","rng.uniform(-0.5,0.5,(100,100))","rng.random((100,100)) - 0.5","rng.random((-0.5, 0.5, 100, 100))"],
+ a:2, ex:"rng.random() → [0,1). Subtracting 0.5 shifts to [-0.5, 0.5). rng.uniform(-0.5, 0.5, (100,100)) also works!"},
+{t:"Random Generation",
+ q:"To draw a 2×3 matrix from the standard normal distribution N(0,1):",
+ opts:["rng.rand((2,3))","rng.randn((2,3))","rng.standard_normal((2,3))","rng.normal(size=(2,3))"],
+ a:2, ex:"rng.standard_normal(shape) draws from N(0,1). The old np.random.randn() style is deprecated — use the Generator API."},
+{t:"Random Generation",
+ q:"rng.integers(0, 10, size=(5, 5)) generates values in which range?",
+ opts:["Floats from 0.0 to 10.0","Integers 0 to 10 inclusive","Integers 0 to 9","5 integers from 0 to 5"],
+ a:2, ex:"integers(low, high) excludes high by default (like range). Values in [0, 9]. Pass endpoint=True to include 10."},
+
+// --- Linear Algebra ---
+{t:"Linear Algebra",
+ q:"A is (3,4), B is (4,5). Which expression gives the correct matrix product?",
+ opts:["A * B","np.multiply(A, B)","A @ B","A.dot @ B"],
+ a:2, ex:"@ is Python's matrix multiplication operator. A*B is element-wise (and would fail here — shapes don't match for element-wise)."},
+{t:"Linear Algebra",
+ q:"How do you transpose a 2D array A?",
+ opts:["A.transpose()","A.T","np.flip(A)","A[::-1]"],
+ a:1, ex:"A.T is the cleanest way — no parentheses. A.transpose() also works. np.flip reverses elements, not the same thing."},
+{t:"Linear Algebra",
+ q:"np.linalg.solve(A, b) is preferred over np.linalg.inv(A) @ b because:",
+ opts:["solve() is faster and numerically more stable","inv() doesn't exist in NumPy","solve() returns a matrix","They give different answers"],
+ a:0, ex:"solve() uses LU decomposition directly — never forms the inverse matrix. It's ~3× faster and avoids amplifying numerical errors."},
+{t:"Linear Algebra",
+ q:"np.linalg.det([[1,2],[3,4]]) returns:",
+ opts:["10.0","−2.0","2.0","[−2.0]"],
+ a:1, ex:"det = 1×4 − 2×3 = 4 − 6 = −2. Negative determinant means the transformation includes a reflection."},
+{t:"Linear Algebra",
+ q:"A and B have the same shape. A * B computes:",
+ opts:["Matrix (dot) product","Element-wise Hadamard product","Outer product","Cross product"],
+ a:1, ex:"* is always element-wise in NumPy. Use @ or np.matmul() for matrix multiplication. Never confuse them!"},
+{t:"Linear Algebra",
+ q:"How do you compute the L2 (Euclidean) norm of a vector v?",
+ opts:["np.norm(v)","v.norm()","np.linalg.norm(v)","np.linalg.l2(v)"],
+ a:2, ex:"np.linalg.norm(v) computes the L2 norm by default. Add ord=1 for L1, ord=np.inf for max norm."},
+{t:"Linear Algebra",
+ q:"np.linalg.eigvals(A) returns:",
+ opts:["Eigenvectors only","Eigenvalues only","Both eigenvalues and eigenvectors","The characteristic polynomial"],
+ a:1, ex:"eigvals() returns only eigenvalues (fast). Use np.linalg.eig() to get both eigenvalues and eigenvectors."},
+
+// --- Aggregations ---
+{t:"Aggregations",
+ q:"A is shape (4, 5). What is A.mean(axis=0).shape?",
+ opts:["(4,)","(5,)","(4, 5)","scalar"],
+ a:1, ex:"axis=0 collapses the row dimension, leaving one value per column. 4 rows collapse → shape (5,). The axis 'disappears'."},
+{t:"Aggregations",
+ q:"A is shape (4, 5). What is A.sum(axis=1).shape?",
+ opts:["(4,)","(5,)","(4, 5)","scalar"],
+ a:0, ex:"axis=1 collapses the column dimension, leaving one sum per row. 5 cols collapse → shape (4,)."},
+{t:"Aggregations",
+ q:"How do you Z-score normalize array A (zero mean, unit variance)?",
+ opts:["A / A.max()","(A - A.min()) / (A.max() - A.min())","(A - A.mean()) / A.std()","np.normalize(A)"],
+ a:2, ex:"Subtract mean to center, divide by std to scale. Z-score is the most common normalization in ML feature engineering."},
+{t:"Aggregations",
+ q:"A.mean(axis=0, keepdims=True) vs A.mean(axis=0) — the key difference:",
+ opts:["keepdims returns a matrix; the other returns a scalar","keepdims=True preserves the collapsed axis as size 1","keepdims=True is slower","No difference"],
+ a:1, ex:"keepdims=True keeps the axis with size 1 instead of removing it. This is essential for broadcasting: (4,5)-(1,5) works, (4,5)-(5,) also works."},
+{t:"Aggregations",
+ q:"np.argmax(A) returns:",
+ opts:["The maximum value in A","The flat index of the maximum","A per-row array of max values","The ArgMax function object"],
+ a:1, ex:"argmax() returns the flat (raveled) index. Use argmax(axis=0) or (axis=1) for per-column or per-row argmax."},
+
+// --- Broadcasting ---
+{t:"Broadcasting",
+ q:"Can you add an array of shape (3, 4) to one of shape (4,)?",
+ opts:["No — shapes must match exactly","Yes — (4,) broadcasts to (3,4)","Yes — only if values are 0 or 1","No — use np.broadcast first"],
+ a:1, ex:"NumPy broadcasts (4,) to (3,4) by repeating along axis 0. The rule: trailing dimensions must match or be 1."},
+{t:"Broadcasting",
+ q:"A is shape (3,1), B is shape (1,4). What is (A + B).shape?",
+ opts:["(3, 4)","(1, 4)","(3, 1)","Error"],
+ a:0, ex:"Both dims broadcast: 3 vs 1 → 3, 1 vs 4 → 4. Result: (3,4). This is the foundation of attention score computation in transformers."},
+{t:"Broadcasting",
+ q:"v = np.array([1, 2, 3]). What is v[:, np.newaxis].shape?",
+ opts:["(3,)","(1, 3)","(3, 1)","(3, 0)"],
+ a:2, ex:"np.newaxis inserts a new axis of size 1. (3,) → (3,1) turns a 1D vector into a column vector."},
+{t:"Broadcasting",
+ q:"np.concatenate([A, B], axis=1) requires A and B to have:",
+ opts:["Same number of columns","Same number of rows","Identical shapes","Same dtype"],
+ a:1, ex:"Concatenating along axis=1 (adding columns) requires the same number of rows. The non-concatenated axes must all match."},
+{t:"Broadcasting",
+ q:"A.flatten() vs A.ravel() — the key difference:",
+ opts:["flatten() always returns a copy; ravel() returns a view when possible","ravel() always returns a copy; flatten() returns a view","They are identical","flatten() works on N-D; ravel() only on 2D"],
+ a:0, ex:"flatten() always allocates new memory. ravel() is faster when the array is contiguous — it returns a view into the same data."},
+{t:"Broadcasting",
+ q:"np.stack([a, b], axis=0) on two shape-(3,) arrays gives shape:",
+ opts:["(6,)","(2, 3)","(3, 2)","(3,)"],
+ a:1, ex:"stack() creates a NEW axis. Two (3,) arrays stacked along axis=0 → (2,3). Compare: concatenate would give (6,)."},
+
+// --- Advanced / No-Loop Patterns ---
+{t:"No-Loop Patterns",
+ q:"You want to initialize A[2, 3:18] and A[4, 3:18] simultaneously with the same values. The NumPy-idiomatic approach:",
+ code:`vals = np.linspace(0, 1, 15)
+# Set rows 2 and 4, cols 3 to 17`,
+ opts:["for r in [2,4]: A[r, 3:18] = vals","A[[2,4], 3:18] = vals","np.put(A, [2,4], vals)","A.update([2,4], 3, 18, vals)"],
+ a:1, ex:"A[[2,4], 3:18] = vals — fancy indexing selects both rows at once. No loop. vals (shape 15) broadcasts to each selected row."},
+{t:"No-Loop Patterns",
+ q:"How do you create a diagonal matrix from vector v = [1, 2, 3]?",
+ opts:["np.eye(3) * v","np.diag(v)","np.diagonal(v)","np.diag_matrix(v)"],
+ a:1, ex:"np.diag(v) when given a 1D array builds a diagonal matrix. When given a 2D array, it extracts the diagonal."},
+{t:"No-Loop Patterns",
+ q:"What does A[np.newaxis, :] do to an array of shape (5,)?",
+ opts:["Returns shape (5,)","Returns shape (1, 5)","Returns shape (5, 1)","Raises IndexError"],
+ a:1, ex:"np.newaxis at the front adds a leading axis of size 1: (5,) → (1,5). Equivalent to unsqueeze(0) in PyTorch."},
+{t:"No-Loop Patterns",
+ q:"You have A of shape (32, 10) and want to subtract each row's mean. Correct approach?",
+ code:`row_means = A.mean(axis=1)
+A_centered = A - row_means  # does this work?`,
+ opts:["Yes — shapes (32,10) and (32,) broadcast correctly","No — need A - row_means[:, np.newaxis]","No — need np.broadcast_to(row_means, A.shape)","Yes — NumPy auto-aligns trailing axes"],
+ a:1, ex:"(32,10) - (32,) fails: trailing dims 10≠32. With keepdims or [:, np.newaxis], row_means becomes (32,1) and broadcasts correctly."},
+{t:"No-Loop Patterns",
+ q:"To compute the outer product of vectors u (shape (m,)) and v (shape (n,)) without np.outer:",
+ opts:["u * v","u @ v","u[:, np.newaxis] * v[np.newaxis, :]","np.kron(u, v)"],
+ a:2, ex:"u[:, np.newaxis] is (m,1), v[np.newaxis,:] is (1,n). Broadcasting their product gives (m,n) — the outer product. Classic no-loop pattern."},
+];
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let slideIdx = 0;
+let qIdx = 0, score = 0, combo = 0, bestCombo = 0;
+let timerVal = 20, timerIv = null, qStart = 0;
+let timings = [], wrongs = [];
+const TIMER_MAX = 20;
+const CIRCUMFERENCE = 2 * Math.PI * 22; // r=22
+
+// ── SCREENS ─────────────────────────────────────────────────────────────────
+function show(id) {
+  ['intro','slides','game','end'].forEach(x => {
+    document.getElementById(x).hidden = (x !== id);
+  });
+}
+
+function startSlides() { renderSlide(0); show('slides'); }
+function skipToGame()  { startGame(); show('game'); }
+function reviewSlides(){ renderSlide(0); show('slides'); }
+function restartGame() { startGame(); show('game'); }
+
+// ── SLIDES ───────────────────────────────────────────────────────────────────
+function renderSlide(i) {
+  slideIdx = i;
+  const s = SLIDES[i];
+  const body = document.getElementById('sl-body');
+  body.innerHTML = `
+    <div class="sl-chip">Slide ${s.n} / ${SLIDES.length}</div>
+    <h2 class="sl-title">${s.title}</h2>
+    <p class="sl-sub">${s.sub}</p>
+    <div class="sl-grid">
+      <div class="sl-pts">${s.pts.map((p,j)=>`<div class="sl-pt"><div class="sl-pt-n">${j+1}</div><span>${p}</span></div>`).join('')}
+      ${s.hi ? `<div class="hi">${s.hi}</div>` : ''}
+      </div>
+      <pre class="cb">${s.code}</pre>
+    </div>`;
+
+  // dots
+  const dots = document.getElementById('sl-dots');
+  dots.innerHTML = SLIDES.map((_,j)=>`<div class="sl-dot ${j===i?'active':j<i?'done':''}"></div>`).join('');
+
+  document.getElementById('sl-ctr').textContent = `${i+1} / ${SLIDES.length}`;
+  document.getElementById('btn-prev').disabled = (i === 0);
+  const btnNext = document.getElementById('btn-next');
+  if (i === SLIDES.length - 1) {
+    btnNext.textContent = 'Start Game ▶';
+    btnNext.onclick = () => { startGame(); show('game'); };
+  } else {
+    btnNext.textContent = 'Next →';
+    btnNext.onclick = nextSlide;
+  }
+}
+
+function nextSlide() { if (slideIdx < SLIDES.length-1) renderSlide(slideIdx+1); }
+function prevSlide() { if (slideIdx > 0) renderSlide(slideIdx-1); }
+
+// ── GAME ─────────────────────────────────────────────────────────────────────
+function startGame() {
+  qIdx = 0; score = 0; combo = 0; bestCombo = 0;
+  timings = []; wrongs = [];
+  updateScore(); updateCombo();
+  renderQ(0);
+}
+
+function renderQ(i) {
+  clearInterval(timerIv);
+  const q = QS[i];
+  qStart = Date.now();
+
+  document.getElementById('g-topic').textContent = q.t;
+  document.getElementById('g-qlbl').textContent = `Q ${i+1} / ${QS.length}`;
+  document.getElementById('q-chip').textContent = q.t;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('prog').style.width = `${(i/QS.length)*100}%`;
+
+  const codeEl = document.getElementById('q-code');
+  if (q.code) { codeEl.textContent = q.code; codeEl.style.display='block'; }
+  else { codeEl.style.display='none'; }
+
+  document.getElementById('expl').className = 'expl';
+  document.getElementById('expl').innerHTML = '';
+  document.getElementById('next-row').style.display = 'none';
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = q.opts.map((o,j)=>`
+    <button class="opt" onclick="answer(${j})" data-idx="${j}">
+      <span class="o-ltr">${'ABCD'[j]}</span>${o}
+    </button>`).join('');
+
+  // animate card
+  const card = document.getElementById('q-card');
+  card.classList.remove('anim');
+  void card.offsetWidth;
+  card.classList.add('anim');
+
+  startTimer();
+}
+
+function startTimer() {
+  timerVal = TIMER_MAX;
+  updateTimerUI(TIMER_MAX);
+  timerIv = setInterval(() => {
+    timerVal--;
+    updateTimerUI(timerVal);
+    if (timerVal <= 0) { clearInterval(timerIv); timeUp(); }
+  }, 1000);
+}
+
+function updateTimerUI(v) {
+  document.getElementById('t-txt').textContent = v;
+  const fill = document.getElementById('t-fill');
+  const offset = CIRCUMFERENCE * (1 - v / TIMER_MAX);
+  fill.style.strokeDashoffset = offset;
+  fill.className = 't-fill' + (v <= 5 ? ' danger' : v <= 10 ? ' warn' : '');
+}
+
+function timeUp() {
+  const elapsed = TIMER_MAX;
+  timings.push(elapsed);
+  const q = QS[qIdx];
+  wrongs.push({idx: qIdx, q: q.q, correct: q.opts[q.a], chose: 'Timed out'});
+  combo = 0; updateCombo();
+  markOptions(q.a, -1);
+  showExpl(q.ex);
+}
+
+function answer(chosen) {
+  clearInterval(timerIv);
+  const elapsed = (Date.now() - qStart) / 1000;
+  timings.push(Math.min(elapsed, TIMER_MAX));
+  const q = QS[qIdx];
+  const correct = chosen === q.a;
+
+  if (correct) {
+    const pts = Math.max(10, Math.floor(100 - elapsed * 4));
+    let mult = combo >= 5 ? 1.5 : combo >= 3 ? 1.25 : 1;
+    const earned = Math.round(pts * mult);
+    score += earned;
+    combo++;
+    if (combo > bestCombo) bestCombo = combo;
+    showPopup(`+${earned}${mult > 1 ? ' ×'+mult : ''}`);
+  } else {
+    wrongs.push({idx: qIdx, q: q.q, correct: q.opts[q.a], chose: q.opts[chosen]});
+    combo = 0;
+  }
+  updateScore(); updateCombo();
+  markOptions(q.a, chosen);
+  showExpl(q.ex);
+}
+
+function markOptions(correctIdx, chosenIdx) {
+  document.querySelectorAll('.opt').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correctIdx) btn.classList.add('correct');
+    else if (i === chosenIdx) btn.classList.add('wrong');
+  });
+  const nr = document.getElementById('next-row');
+  nr.style.display = 'flex';
+  const remaining = QS.length - qIdx - 1;
+  document.getElementById('q-ctr').textContent =
+    remaining > 0 ? `${remaining} question${remaining>1?'s':''} remaining` : 'Last question!';
+}
+
+function showExpl(text) {
+  const el = document.getElementById('expl');
+  el.innerHTML = `<strong>Explanation:</strong> ${text}`;
+  el.classList.add('show');
+}
+
+function nextQ() {
+  qIdx++;
+  if (qIdx >= QS.length) { endGame(); return; }
+  renderQ(qIdx);
+}
+
+function updateScore() { document.getElementById('g-score').textContent = score; }
+function updateCombo() {
+  const box = document.getElementById('g-cbox');
+  document.getElementById('g-combo').textContent = `×${combo >= 5 ? 1.5 : combo >= 3 ? 1.25 : 1}`;
+  box.classList.toggle('hot', combo >= 3);
+}
+
+function showPopup(msg) {
+  const pp = document.getElementById('pp');
+  pp.textContent = msg;
+  pp.classList.add('show');
+  setTimeout(() => pp.classList.remove('show'), 1400);
+}
+
+// ── END SCREEN ───────────────────────────────────────────────────────────────
+function endGame() {
+  clearInterval(timerIv);
+  const total = QS.length;
+  const correct = total - wrongs.length;
+  const acc = Math.round((correct / total) * 100);
+  const avgTime = timings.length ? (timings.reduce((a,b)=>a+b,0)/timings.length).toFixed(1) : 0;
+
+  document.getElementById('end-score').textContent = score;
+  document.getElementById('r-correct').textContent = `${correct}/${total}`;
+  document.getElementById('r-acc').textContent = `${acc}%`;
+  document.getElementById('r-combo').textContent = `×${bestCombo >= 5 ? 1.5 : bestCombo >= 3 ? 1.25 : 1} (${bestCombo})`;
+  document.getElementById('r-speed').textContent = `${avgTime}s`;
+
+  const trophy = score >= 3500 ? '🏆' : score >= 2500 ? '🥇' : score >= 1500 ? '🥈' : '🥉';
+  const rankCls = score >= 3500 ? 'rank-s' : score >= 2500 ? 'rank-a' : score >= 1500 ? 'rank-b' : 'rank-c';
+  const rankTxt = score >= 3500 ? 'S Rank — NumPy Sensei!' : score >= 2500 ? 'A Rank — Dojo Master' : score >= 1500 ? 'B Rank — Practitioner' : 'C Rank — Keep Training';
+  document.getElementById('end-trophy').textContent = trophy;
+  document.getElementById('end-ttl').textContent = score >= 3500 ? 'Legendary!' : score >= 2500 ? 'Excellent!' : 'Dojo Complete!';
+  const rankEl = document.getElementById('end-rank');
+  rankEl.textContent = rankTxt;
+  rankEl.className = `rank ${rankCls}`;
+
+  // missed questions
+  const wrap = document.getElementById('missed-wrap');
+  if (wrongs.length === 0) {
+    wrap.innerHTML = '<div style="color:#a6e3a1;text-align:center;margin-bottom:16px;font-size:1rem;">🎯 Perfect score! All correct!</div>';
+  } else {
+    wrap.innerHTML = `<div style="color:#a8b8d8;font-size:.82rem;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Missed (${wrongs.length})</div>` +
+      wrongs.slice(0,8).map(w=>`<div class="mi"><strong>${w.q}</strong>You chose: ${w.chose}<div class="mi-ans">✓ ${w.correct}</div></div>`).join('') +
+      (wrongs.length > 8 ? `<div style="color:#a8b8d8;font-size:.82rem;text-align:center;">…and ${wrongs.length-8} more</div>` : '');
+  }
+
+  show('end');
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,10 @@
 {
   "pages": [
     {
+      "title": "NumPy Dojo — Speed Exercises",
+      "path": "numpy_exercises/index.html"
+    },
+    {
       "title": "TechAarvam YouTube Feed",
       "path": "youtube_feed.html"
     },
