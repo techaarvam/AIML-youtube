@@ -83,6 +83,8 @@ pre.cb .op{color:var(--cop);}
 .t-fill{fill:none;stroke:#2d7a4f;stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke 600ms;}
 .t-fill.warn{stroke:#f39c12;}
 .t-fill.danger{stroke:#c0392b;}
+.t-fill.read{stroke:#5b8dd9;}
+.opt:disabled{opacity:.35;cursor:not-allowed;}
 .t-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:.9rem;font-weight:800;color:white;}
 .prog-wrap{height:4px;background:var(--line);}
 .prog-fill{height:100%;background:linear-gradient(90deg,#b44f2f,#e06030);transition:width 300ms ease;}
@@ -608,6 +610,7 @@ let qIdx = 0, score = 0, combo = 0, bestCombo = 0;
 let timerVal = 20, timerIv = null, qStart = 0;
 let timings = [], wrongs = [];
 const TIMER_MAX = 20;
+const READ_TIME = 15;
 const CIRCUMFERENCE = 2 * Math.PI * 22; // r=22
 
 // ── SCREENS ─────────────────────────────────────────────────────────────────
@@ -668,7 +671,6 @@ function startGame() {
 function renderQ(i) {
   clearInterval(timerIv);
   const q = QS[i];
-  qStart = Date.now();
 
   document.getElementById('g-topic').textContent = q.t;
   document.getElementById('g-qlbl').textContent = `Q ${i+1} / ${QS.length}`;
@@ -696,11 +698,40 @@ function renderQ(i) {
   void card.offsetWidth;
   card.classList.add('anim');
 
-  startTimer();
+  startReading();
+}
+
+function setOptsDisabled(disabled) {
+  document.querySelectorAll('.opt').forEach(b => b.disabled = disabled);
+}
+
+function startReading() {
+  setOptsDisabled(true);
+  let readVal = READ_TIME;
+  updateReadingUI(readVal);
+  timerIv = setInterval(() => {
+    readVal--;
+    if (readVal <= 0) {
+      clearInterval(timerIv);
+      setOptsDisabled(false);
+      startTimer();
+    } else {
+      updateReadingUI(readVal);
+    }
+  }, 1000);
+}
+
+function updateReadingUI(v) {
+  document.getElementById('t-txt').textContent = '📖';
+  const fill = document.getElementById('t-fill');
+  const offset = CIRCUMFERENCE * (1 - v / READ_TIME);
+  fill.style.strokeDashoffset = offset;
+  fill.className = 't-fill read';
 }
 
 function startTimer() {
   timerVal = TIMER_MAX;
+  qStart = Date.now();
   updateTimerUI(TIMER_MAX);
   timerIv = setInterval(() => {
     timerVal--;
