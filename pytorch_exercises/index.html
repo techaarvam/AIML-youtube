@@ -383,7 +383,7 @@ loss.<span class="fn">backward</span>()   <span class="cm"># fills x.grad</span>
 optimizer.<span class="fn">zero_grad</span>()  <span class="cm"># ← always before backward!</span>
 <span class="kw">with</span> torch.<span class="fn">no_grad</span>():
     preds = model(X_val)  <span class="cm"># no grad overhead</span>`,
- hi:"Forgetting zero_grad() causes gradients to accumulate across batches — a very common bug in training loops."},
+ hi:"Forgetting zero_grad() causes gradients to accumulate across batches — a very common bug in training loops. Inside torch.no_grad(), op outputs get requires_grad=False automatically, so no graph is built — ideal for inference and validation."},
 ];
 
 // ── QUESTION DATA ───────────────────────────────────────────────────────────
