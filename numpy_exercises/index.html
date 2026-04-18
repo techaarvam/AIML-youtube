@@ -355,6 +355,7 @@ A_n = (A - A.<span class="fn">mean</span>(axis=<span class="num">0</span>)) / A.
       "Rule: trailing dimensions must match, or be 1.",
       "<code>(3,4) + (4,)</code> → OK, <code>(4,)</code> broadcasts to <code>(3,4)</code>",
       "<code>(3,1) + (1,4)</code> → <code>(3,4)</code> — both dimensions broadcast",
+      "<code>(3,2) + (2,4)</code> → <strong>ERROR</strong> — not matmul; trailing 2 ≠ 4, inner dims don't cancel",
       "<code>(3,4) + (3,)</code> → <strong>ERROR</strong> — trailing dim 3 ≠ 4",
       "Use <code>keepdims=True</code> so result shapes align for broadcasting"],
  code:`A = <span class="fn">np.zeros</span>((<span class="num">3</span>, <span class="num">4</span>))
