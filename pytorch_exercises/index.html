@@ -293,7 +293,7 @@ rows = A[[<span class="num">0</span>, <span class="num">2</span>, <span class="n
       "<code>A[A &gt; 0]</code> — 1D tensor of matching elements",
       "<code>torch.where(cond, x, y)</code> — vectorized if-else",
       "<code>(A &gt; 0) &amp; (A &lt; 5)</code> — combine with <code>&amp;</code> / <code>|</code> (not Python <code>and</code>!)",
-      "<code>A.sum(A &gt; 3)</code> — count True values (bool = 0/1)",
+      "<code>(A &gt; 3).sum()</code> — count True values (bool = 0/1)",
       "<code>torch.clamp(A, 0, 1)</code> — clamp to [0, 1]"],
  code:`<span class="cm"># ReLU — three equivalent ways</span>
 relu = torch.<span class="fn">where</span>(A &gt; <span class="num">0</span>, A, torch.<span class="fn">zeros_like</span>(A))
@@ -324,7 +324,7 @@ W = torch.<span class="fn">randn</span>(<span class="num">128</span>, <span clas
 {n:"07",title:"Linear Algebra",sub:"torch.linalg",
  pts:["<code>A @ B</code> — matrix multiply (works identically to NumPy!)",
       "<code>A * B</code> — element-wise (Hadamard) product",
-      "<code>A.T</code> — transpose for 2D; use <code>A.transpose(0,1)</code> for N-D",
+      "<code>A.T</code> — reverses all dims (2D: swap rows/cols; N-D: use <code>A.permute()</code> for explicit control)",
       "<code>torch.linalg.det(A)</code> — determinant",
       "<code>torch.linalg.solve(A, b)</code> — solve Ax=b (prefer over inv!)",
       "<code>torch.linalg.norm(v)</code> — L2 norm by default",
