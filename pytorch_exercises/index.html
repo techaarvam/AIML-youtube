@@ -141,7 +141,7 @@ pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family
   <p class="intro-sub">Master PyTorch tensors through speed challenges. Indexing, autograd, broadcasting — the patterns every ML engineer must own.</p>
   <div class="feats">
     <div class="feat"><strong>10 Slides</strong>Core concepts with real code</div>
-    <div class="feat"><strong>51 Exercises</strong>Tensors → autograd → broadcasting</div>
+    <div class="feat"><strong>50 Exercises</strong>Tensors → autograd → broadcasting</div>
     <div class="feat"><strong>Timer Scoring</strong>Speed earns bonus points</div>
     <div class="feat"><strong>NumPy Parallel</strong>Every pattern maps back</div>
   </div>
@@ -579,11 +579,6 @@ A_centered = A - row_means   # does this work?`,
  q:"A.flatten() vs A.reshape(-1) — the key difference in PyTorch:",
  opts:["flatten() always returns a copy; reshape(-1) returns a view when possible","reshape(-1) always returns a copy; flatten() is a view","They are identical","flatten() works on N-D; reshape only on 2D"],
  a:0, ex:"A.flatten() always allocates new memory. A.reshape(-1) or A.view(-1) returns a view when memory is contiguous — faster for large tensors."},
-{t:"Broadcasting",
- q:"You have a list of 8 tensors each of shape (3, 4). What shape does torch.stack(tensors, dim=0) produce?",
- opts:["(24, 4)","(3, 32)","(8, 3, 4)","(3, 4, 8)"],
- a:2, ex:"torch.stack() inserts a new axis at dim=0, making each tensor a slice along that axis. 8 tensors of (3,4) → (8,3,4). Use torch.cat() along dim=0 instead if you want (24,4) with no new axis."},
-
 // --- Autograd ---
 {t:"Autograd",
  q:"How do you create a tensor that PyTorch will track gradients for?",
