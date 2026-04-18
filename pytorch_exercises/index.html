@@ -286,7 +286,7 @@ A[<span class="num">1</span>::<span class="num">2</span>, <span class="num">3</s
 
 <span class="cm"># Fancy indexing — specific rows</span>
 rows = A[[<span class="num">0</span>, <span class="num">2</span>, <span class="num">4</span>], :]`,
- hi:"PyTorch indexing syntax is identical to NumPy. The only difference: fancy-indexed results never share memory."},
+ hi:"PyTorch indexing syntax is identical to NumPy. Slicing returns a view (shared memory); fancy indexing returns a copy — same behaviour as NumPy."},
 
 {n:"05",title:"Boolean Indexing & torch.where",sub:"Conditional selection",
  pts:["<code>A &gt; 0</code> — bool tensor, same shape as A",
@@ -442,7 +442,7 @@ const QS = [
 {t:"Indexing & Slicing",
  q:"A[[0, 2, 4], :] is an example of:",
  opts:["Boolean indexing","Fancy (integer-list) indexing","Slice indexing","View indexing"],
- a:1, ex:"Passing a list of integers is fancy indexing — it selects specific rows by position. Unlike slicing, it always returns a copy in PyTorch."},
+ a:1, ex:"Passing a list of integers is fancy indexing — it selects specific rows by position. It returns a copy, not a view (same behaviour as NumPy fancy indexing)."},
 {t:"Indexing & Slicing",
  q:"A is (10, 20). A[2:8:2, 5:15] selects which rows and columns?",
  opts:["Rows 2,4,6,8 and cols 5-15","Rows 2,4,6 and cols 5-14","Rows 2,4,6 and cols 5-15","Rows 2,4,6,8 and cols 5-14"],
