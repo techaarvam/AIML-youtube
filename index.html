@@ -248,8 +248,6 @@
     const viewerOpen = document.getElementById("viewer-open");
     const search = new URLSearchParams(window.location.search);
     const requestedPage = search.get("page");
-    let resizeTimer = null;
-    let currentSelectionType = "html";
 
     function normalizePages(data) {
       if (!Array.isArray(data.pages)) {
@@ -302,7 +300,7 @@
       nextUrl.searchParams.set("page", selected.path);
       history.replaceState({}, "", nextUrl);
 
-      currentSelectionType = selected.type;
+      viewer.style.height = "";
       viewer.src = selected.src;
       viewer.hidden = false;
       emptyState.hidden = true;
@@ -314,36 +312,6 @@
       document.querySelectorAll(".page-link").forEach((link) => {
         link.classList.toggle("active", link.dataset.path === selected.path);
       });
-
-      if (selected.type === "embed") {
-        viewer.style.height = "420px";
-      }
-    }
-
-    function resizeViewer() {
-      if (viewer.hidden || !viewer.contentWindow) {
-        return;
-      }
-
-      if (currentSelectionType === "embed") {
-        viewer.style.height = "420px";
-        return;
-      }
-
-      try {
-        const doc = viewer.contentWindow.document;
-        const bodyHeight = doc.body ? doc.body.scrollHeight : 0;
-        const htmlHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
-        const nextHeight = Math.max(bodyHeight, htmlHeight, 420);
-        viewer.style.height = `${nextHeight}px`;
-      } catch (error) {
-        viewer.style.height = "420px";
-      }
-    }
-
-    function scheduleResize() {
-      window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(resizeViewer, 60);
     }
 
     function renderList(pages) {
@@ -371,23 +339,6 @@
       });
     }
 
-    viewer.addEventListener("load", () => {
-      scheduleResize();
-
-      try {
-        const frameWindow = viewer.contentWindow;
-        frameWindow.addEventListener("resize", scheduleResize);
-        const doc = frameWindow.document;
-
-        if (doc.fonts && doc.fonts.ready) {
-          doc.fonts.ready.then(scheduleResize).catch(() => {});
-        }
-      } catch (error) {
-        viewer.style.height = "720px";
-      }
-    });
-
-    window.addEventListener("resize", scheduleResize);
 
     async function init() {
       try {
