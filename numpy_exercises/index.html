@@ -226,7 +226,7 @@ pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family
 const SLIDES = [
 {n:"01",title:"Why NumPy?",sub:"The No-Loop Manifesto",
  pts:["NumPy arrays are N-dimensional tensors — the core data structure for all of ML/AI.",
-      "Vectorized operations run in compiled C/Fortran — <strong>100–1000× faster</strong> than Python loops.",
+      "Vectorized operations run in compiled C — linear algebra ops use LAPACK/BLAS (Fortran-heritage libraries) — <strong>100–1000× faster</strong> than Python loops.",
       "Rule&nbsp;#1: <strong>If you're writing a for loop, there's probably a better NumPy way.</strong>",
       "Every pattern here maps directly to <code>torch.Tensor</code> in PyTorch.",
       "Thinking in <em>shapes</em> and <em>axes</em> is the core mental model of deep learning."],
