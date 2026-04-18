@@ -303,7 +303,7 @@ relu = torch.nn.functional.<span class="fn">relu</span>(A)
 <span class="cm"># Count and filter</span>
 n_pos = (A &gt; <span class="num">0</span>).<span class="fn">sum</span>()
 mask = (A &gt; <span class="num">0</span>) &amp; (A &lt; <span class="num">5</span>)`,
- hi:"torch.clamp(A, min=0) is the fastest ReLU — a single fused op. Use F.relu() in nn.Module forward passes."},
+ hi:"torch.clamp(A, min=0), F.relu(A), and torch.where(A > 0, A, zeros) are equivalent. Prefer F.relu() in nn.Module for clarity."},
 
 {n:"06",title:"Random Generation",sub:"Seeds and distributions",
  pts:["<code>torch.manual_seed(42)</code> — set global seed for reproducibility",
