@@ -5,6 +5,10 @@
       "path": "numpy_exercises/index.html"
     },
     {
+      "title": "PyTorch Dojo — Speed Exercises",
+      "path": "pytorch_exercises/index.html"
+    },
+    {
       "title": "TechAarvam YouTube Feed",
       "path": "youtube_feed.html"
     },

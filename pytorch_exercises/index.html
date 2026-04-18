@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyTorch Dojo — Speed Exercises</title>
+<style>
+:root {
+  --bg: #f3efe6; --panel: #fffaf0; --ink: #1e1d1a; --muted: #6d6659;
+  --line: #d7cfbf; --accent: #b44f2f; --accent-soft: #f3d7cc;
+  --green: #2d7a4f; --green-soft: #d4edda; --red: #c0392b; --red-soft: #fce4e4;
+  --navy: #0f1729; --navy-mid: #1a2744;
+  --cbg: #1e1e2e; --cfg: #cdd6f4; --ckw: #cba6f7; --cstr: #a6e3a1;
+  --cnum: #fab387; --cfn: #89b4fa; --ccm: #6c7086; --cop: #94e2d5;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+[hidden]{display:none!important;}
+
+/* ── INTRO ── */
+#intro{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;background:radial-gradient(ellipse at 60% 30%,#1a2744 0%,#0f1729 70%);color:white;}
+.badge{font-size:3.5rem;margin-bottom:12px;}
+.intro-title{font-size:2.4rem;font-weight:800;color:#f5c07a;margin-bottom:8px;}
+.intro-sub{font-size:1rem;color:#a8b8d8;max-width:540px;line-height:1.6;margin-bottom:28px;}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:680px;margin-bottom:36px;}
+.feat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;font-size:.85rem;color:#c8d4e8;}
+.feat strong{display:block;color:#f5c07a;font-size:1rem;margin-bottom:3px;}
+.btn-p{background:linear-gradient(135deg,#b44f2f,#e06030);color:white;border:none;border-radius:12px;padding:14px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 120ms,box-shadow 120ms;box-shadow:0 4px 18px rgba(180,79,47,.4);}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(180,79,47,.5);}
+.btn-s{background:transparent;color:#a8b8d8;border:1px solid rgba(168,184,216,.3);border-radius:10px;padding:10px 22px;font-size:.9rem;cursor:pointer;transition:color 120ms,border-color 120ms;font-family:inherit;}
+.btn-s:hover{color:white;border-color:rgba(255,255,255,.5);}
+.row-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+/* ── SLIDES ── */
+#slides{min-height:100vh;background:var(--navy);color:white;display:flex;flex-direction:column;}
+.sl-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sl-dots{display:flex;gap:6px;}
+.sl-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.18);transition:background 200ms;}
+.sl-dot.active{background:#f5c07a;}
+.sl-dot.done{background:rgba(255,255,255,.45);}
+.sl-body{flex:1;padding:36px 28px;max-width:900px;margin:0 auto;width:100%;}
+.sl-chip{display:inline-block;background:rgba(245,192,122,.12);color:#f5c07a;border:1px solid rgba(245,192,122,.28);border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.sl-title{font-size:1.9rem;font-weight:800;margin-bottom:6px;line-height:1.2;}
+.sl-sub{font-size:1rem;color:#a8b8d8;margin-bottom:24px;}
+.sl-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+@media(max-width:660px){.sl-grid{grid-template-columns:1fr;} .sl-title{font-size:1.4rem;}}
+.sl-pts{display:grid;gap:10px;}
+.sl-pt{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;color:#c8d4e8;line-height:1.5;}
+.sl-pt-n{flex-shrink:0;width:20px;height:20px;background:rgba(245,192,122,.14);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#f5c07a;font-weight:700;margin-top:2px;}
+.sl-pt code,.ic{background:rgba(255,255,255,.08);color:#89b4fa;padding:1px 5px;border-radius:4px;font-family:'Fira Code',monospace;font-size:.84em;}
+.hi{background:rgba(180,79,47,.1);border:1px solid rgba(180,79,47,.28);border-left:3px solid #b44f2f;border-radius:8px;padding:11px 14px;font-size:.85rem;color:#f3d7cc;line-height:1.5;margin-top:10px;}
+pre.cb{background:var(--cbg);border-radius:10px;padding:16px 18px;font-family:'Fira Code','Cascadia Code','Courier New',monospace;font-size:.82rem;line-height:1.7;overflow-x:auto;color:var(--cfg);white-space:pre;}
+pre.cb .kw{color:var(--ckw);}
+pre.cb .fn{color:var(--cfn);}
+pre.cb .str{color:var(--cstr);}
+pre.cb .num{color:var(--cnum);}
+pre.cb .cm{color:var(--ccm);font-style:italic;}
+pre.cb .op{color:var(--cop);}
+.sl-foot{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.08);}
+.btn-sl{background:rgba(255,255,255,.08);color:white;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:9px 20px;font-size:.9rem;cursor:pointer;transition:background 120ms;font-family:inherit;}
+.btn-sl:hover{background:rgba(255,255,255,.14);}
+.btn-slp{background:linear-gradient(135deg,#b44f2f,#e06030);border-color:transparent;font-weight:600;}
+.btn-slp:hover{opacity:.9;}
+.sl-ctr{color:#a8b8d8;font-size:.85rem;}
+
+/* ── GAME ── */
+#game{min-height:100vh;background:var(--bg);padding-bottom:40px;}
+.g-hdr{background:var(--navy);color:white;padding:12px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.g-hdr-left{flex:1;min-width:0;}
+.g-topic{font-size:.7rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.g-qlbl{font-size:.95rem;font-weight:700;color:#f5c07a;}
+.g-stats{display:flex;align-items:center;gap:16px;}
+.sbox{text-align:center;}
+.slbl{font-size:.65rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.06em;}
+.sval{font-size:1.3rem;font-weight:800;color:#f5c07a;line-height:1;}
+.cbox{background:rgba(245,192,122,.08);border:1px solid rgba(245,192,122,.25);border-radius:8px;padding:5px 10px;text-align:center;min-width:64px;transition:background 300ms,border-color 300ms;}
+.cbox.hot{background:rgba(245,192,122,.22);border-color:#f5c07a;}
+.clbl{font-size:.6rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.06em;}
+.cval{font-size:.95rem;font-weight:700;color:#f5c07a;}
+.tw{position:relative;width:52px;height:52px;flex-shrink:0;}
+.tr{transform:rotate(-90deg);width:52px;height:52px;}
+.t-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:4;}
+.t-fill{fill:none;stroke:#2d7a4f;stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke 600ms;}
+.t-fill.warn{stroke:#f39c12;}
+.t-fill.danger{stroke:#c0392b;}
+.t-fill.read{stroke:#5b8dd9;}
+.opt:disabled{opacity:.35;cursor:not-allowed;}
+.t-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:.9rem;font-weight:800;color:white;}
+.prog-wrap{height:4px;background:var(--line);}
+.prog-fill{height:100%;background:linear-gradient(90deg,#b44f2f,#e06030);transition:width 300ms ease;}
+.q-area{max-width:780px;margin:28px auto;padding:0 22px;}
+.t-chip{display:inline-block;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(180,79,47,.18);border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.q-card{background:white;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 4px 22px rgba(80,58,26,.07);}
+.q-text{font-size:1.05rem;line-height:1.6;font-weight:600;margin-bottom:14px;color:var(--ink);}
+pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family:'Fira Code','Cascadia Code',monospace;font-size:.82rem;line-height:1.6;color:var(--cfg);margin-bottom:18px;overflow-x:auto;white-space:pre;}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+@media(max-width:560px){.opts{grid-template-columns:1fr;}}
+.opt{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;cursor:pointer;font-size:.88rem;color:var(--ink);font-family:inherit;transition:border-color 120ms,background 120ms,transform 80ms;line-height:1.4;}
+.opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft);transform:translateY(-1px);}
+.opt:disabled{cursor:default;}
+.opt.correct{background:#d4edda;border-color:#2d7a4f;color:#1a4d2e;}
+.opt.wrong{background:#fce4e4;border-color:#c0392b;color:#7b1414;}
+.opt.reveal{background:#fff9e6;border-color:#f39c12;}
+.o-ltr{display:inline-block;width:20px;height:20px;background:var(--line);border-radius:5px;text-align:center;line-height:20px;font-size:.7rem;font-weight:700;margin-right:7px;vertical-align:middle;flex-shrink:0;}
+.expl{margin-top:14px;background:#f0f7ff;border:1px solid #bee3ff;border-left:3px solid #3498db;border-radius:8px;padding:10px 14px;font-size:.86rem;color:#1a3a5c;line-height:1.5;display:none;}
+.expl.show{display:block;}
+.next-row{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:none;}
+.q-ctr{font-size:.82rem;color:var(--muted);}
+.pp{position:fixed;top:74px;right:22px;background:var(--navy);color:#f5c07a;border-radius:10px;padding:10px 18px;font-size:1.1rem;font-weight:800;box-shadow:0 4px 18px rgba(0,0,0,.3);transform:translateY(-8px);opacity:0;transition:transform 280ms,opacity 280ms;pointer-events:none;z-index:100;}
+.pp.show{transform:translateY(0);opacity:1;}
+
+/* ── END ── */
+#end{min-height:100vh;background:radial-gradient(ellipse at 60% 30%,#1a2744 0%,#0f1729 70%);color:white;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:44px 22px;}
+.end-trophy{font-size:3.5rem;margin-bottom:12px;}
+.end-title{font-size:2rem;font-weight:800;color:#f5c07a;margin-bottom:6px;}
+.end-score{font-size:3.2rem;font-weight:900;color:white;margin-bottom:2px;}
+.end-slbl{font-size:.9rem;color:#a8b8d8;margin-bottom:26px;}
+.rank{display:inline-block;padding:7px 22px;border-radius:22px;font-size:1rem;font-weight:700;margin-bottom:26px;}
+.rank-s{background:linear-gradient(135deg,#f5c07a,#e06030);color:#1a1a1a;}
+.rank-a{background:linear-gradient(135deg,#a8e6cf,#2d7a4f);color:#1a1a1a;}
+.rank-b{background:rgba(245,192,122,.14);border:1px solid rgba(245,192,122,.38);color:#f5c07a;}
+.rank-c{background:rgba(168,184,216,.1);border:1px solid rgba(168,184,216,.28);color:#a8b8d8;}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;max-width:660px;width:100%;margin-bottom:28px;}
+.rc{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;text-align:center;}
+.rc-v{font-size:1.5rem;font-weight:800;color:#f5c07a;}
+.rc-l{font-size:.75rem;color:#a8b8d8;margin-top:3px;}
+.missed-list{max-width:660px;width:100%;margin-bottom:22px;}
+.mi{background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.18);border-radius:10px;padding:10px 14px;margin-bottom:7px;font-size:.82rem;color:#e0c0bc;}
+.mi strong{display:block;color:white;margin-bottom:3px;}
+.mi-ans{color:#a6e3a1;font-size:.8rem;margin-top:3px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fadeUp 240ms ease forwards;}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="badge">🔥</div>
+  <h1 class="intro-title">PyTorch Dojo</h1>
+  <p class="intro-sub">Master PyTorch tensors through speed challenges. Indexing, autograd, broadcasting — the patterns every ML engineer must own.</p>
+  <div class="feats">
+    <div class="feat"><strong>10 Slides</strong>Core concepts with real code</div>
+    <div class="feat"><strong>50 Exercises</strong>Tensors → autograd → broadcasting</div>
+    <div class="feat"><strong>Timer Scoring</strong>Speed earns bonus points</div>
+    <div class="feat"><strong>NumPy Parallel</strong>Every pattern maps back</div>
+  </div>
+  <div class="row-btns">
+    <button class="btn-p" onclick="startSlides()">Start Learning ▶</button>
+    <button class="btn-s" onclick="skipToGame()">Skip to Game ⚡</button>
+  </div>
+</div>
+
+<!-- SLIDES -->
+<div id="slides" hidden>
+  <div class="sl-nav">
+    <div class="sl-dots" id="sl-dots"></div>
+    <button class="btn-s" onclick="skipToGame()" style="font-size:.82rem;padding:7px 16px;">Skip to Game ⚡</button>
+  </div>
+  <div class="sl-body" id="sl-body"></div>
+  <div class="sl-foot">
+    <button class="btn-sl" id="btn-prev" onclick="prevSlide()">← Back</button>
+    <span class="sl-ctr" id="sl-ctr"></span>
+    <button class="btn-sl btn-slp" id="btn-next" onclick="nextSlide()">Next →</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" hidden>
+  <div class="g-hdr">
+    <div class="g-hdr-left">
+      <div class="g-topic" id="g-topic"></div>
+      <div class="g-qlbl" id="g-qlbl"></div>
+    </div>
+    <div class="g-stats">
+      <div class="sbox"><div class="slbl">Score</div><div class="sval" id="g-score">0</div></div>
+      <div class="cbox" id="g-cbox"><div class="clbl">Combo</div><div class="cval" id="g-combo">×1</div></div>
+      <div class="tw">
+        <svg class="tr" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="22" class="t-track"/>
+          <circle cx="26" cy="26" r="22" class="t-fill" id="t-fill"/>
+        </svg>
+        <span class="t-txt" id="t-txt">20</span>
+      </div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+  <div class="q-area">
+    <div class="t-chip" id="q-chip"></div>
+    <div class="q-card anim" id="q-card">
+      <div class="q-text" id="q-text"></div>
+      <pre class="q-code" id="q-code" style="display:none;"></pre>
+      <div class="opts" id="opts"></div>
+      <div class="expl" id="expl"></div>
+      <div class="next-row" id="next-row">
+        <span class="q-ctr" id="q-ctr"></span>
+        <button class="btn-p" onclick="nextQ()" style="padding:9px 22px;font-size:.9rem;">Next →</button>
+      </div>
+    </div>
+  </div>
+  <div class="pp" id="pp"></div>
+</div>
+
+<!-- END -->
+<div id="end" hidden>
+  <div class="end-trophy" id="end-trophy">🏆</div>
+  <h1 class="end-title" id="end-ttl">Dojo Complete!</h1>
+  <div class="end-score" id="end-score">0</div>
+  <div class="end-slbl">Total Points</div>
+  <div class="rank" id="end-rank">Rank B</div>
+  <div class="res-grid">
+    <div class="rc"><div class="rc-v" id="r-correct">0</div><div class="rc-l">Correct</div></div>
+    <div class="rc"><div class="rc-v" id="r-acc">0%</div><div class="rc-l">Accuracy</div></div>
+    <div class="rc"><div class="rc-v" id="r-combo">×1</div><div class="rc-l">Best Combo</div></div>
+    <div class="rc"><div class="rc-v" id="r-speed">0s</div><div class="rc-l">Avg Speed</div></div>
+  </div>
+  <div class="missed-list" id="missed-wrap"></div>
+  <div class="row-btns">
+    <button class="btn-p" onclick="restartGame()">Play Again ↺</button>
+    <button class="btn-s" onclick="reviewSlides()">Review Slides 📖</button>
+  </div>
+</div>
+
+<script>
+// ── SLIDE DATA ──────────────────────────────────────────────────────────────
+const SLIDES = [
+{n:"01",title:"Why PyTorch?",sub:"Tensors + Autograd",
+ pts:["PyTorch tensors are N-dimensional arrays — identical to NumPy arrays, plus gradient tracking.",
+      "Every operation is recorded on a computational graph. Call <code>.backward()</code> and gradients flow.",
+      "Rule&nbsp;#1: <strong>If you're writing a for loop, there's a tensor op for that.</strong>",
+      "NumPy → PyTorch is mostly a namespace swap: <code>np.zeros</code> → <code>torch.zeros</code>.",
+      "Key addition over NumPy: <strong>autograd</strong> — gradients are computed automatically."],
+ code:`<span class="cm"># NumPy</span>
+W = np.<span class="fn">random</span>.randn(<span class="num">128</span>, <span class="num">64</span>)
+out = np.<span class="fn">maximum</span>(<span class="num">0</span>, X <span class="op">@</span> W.T)
+
+<span class="cm"># PyTorch — almost identical + grad tracking</span>
+W = torch.<span class="fn">randn</span>(<span class="num">128</span>, <span class="num">64</span>, requires_grad=<span class="kw">True</span>)
+out = torch.<span class="fn">relu</span>(X <span class="op">@</span> W.T)  <span class="cm"># grad tracked!</span>`,
+ hi:"You already know 80% of PyTorch from NumPy. The rest is autograd, nn.Module, and device management."},
+
+{n:"02",title:"Tensor Creation",sub:"The building blocks",
+ pts:["<code>torch.tensor([1,2,3])</code> — from Python list, infers dtype",
+      "<code>torch.zeros(m, n)</code> — accepts separate ints OR a tuple",
+      "<code>torch.ones(m, n)</code>, <code>torch.eye(n)</code>",
+      "<code>torch.arange(start, stop, step)</code> — excludes stop (like range)",
+      "<code>torch.linspace(start, stop, steps)</code> — includes stop",
+      "<code>torch.zeros_like(t)</code>, <code>torch.ones_like(t)</code> — match shape & dtype",
+      "<code>torch.full((m, n), fill_value)</code> — fill with a constant"],
+ code:`A = torch.<span class="fn">zeros</span>(<span class="num">3</span>, <span class="num">4</span>)        <span class="cm"># shape (3,4)</span>
+I = torch.<span class="fn">eye</span>(<span class="num">4</span>)              <span class="cm"># 4×4 identity</span>
+v = torch.<span class="fn">arange</span>(<span class="num">0</span>, <span class="num">10</span>, <span class="num">2</span>)   <span class="cm"># [0,2,4,6,8]</span>
+t = torch.<span class="fn">linspace</span>(<span class="num">0</span>, <span class="num">1</span>, <span class="num">5</span>)  <span class="cm"># [0,.25,.5,.75,1]</span>
+Z = torch.<span class="fn">zeros_like</span>(A)       <span class="cm"># same shape+dtype</span>`,
+ hi:"torch.tensor() vs torch.Tensor(): tensor() infers dtype from data; Tensor() always creates float32."},
+
+{n:"03",title:"Shapes & Reshaping",sub:"Think in dimensions",
+ pts:["<code>t.shape</code> — returns a torch.Size (behaves like a tuple)",
+      "<code>t.size()</code> — same as t.shape; <code>t.size(0)</code> gives dim 0",
+      "<code>t.reshape(m, n)</code> — returns a view when possible",
+      "<code>t.view(m, n)</code> — always returns a view, requires contiguous memory",
+      "<code>t.unsqueeze(dim)</code> — insert size-1 axis (like np.newaxis)",
+      "<code>t.squeeze(dim)</code> — remove size-1 axes",
+      "Use <code>-1</code> in reshape/view to infer a dimension"],
+ code:`A = torch.<span class="fn">zeros</span>(<span class="num">12</span>)
+B = A.<span class="fn">reshape</span>(<span class="num">3</span>, <span class="num">4</span>)      <span class="cm"># (3,4)</span>
+C = A.<span class="fn">view</span>(-<span class="num">1</span>, <span class="num">4</span>)        <span class="cm"># same — infer rows</span>
+
+v = torch.<span class="fn">zeros</span>(<span class="num">3</span>)        <span class="cm"># (3,)</span>
+v.<span class="fn">unsqueeze</span>(<span class="num">0</span>)             <span class="cm"># (1,3)</span>
+v.<span class="fn">unsqueeze</span>(<span class="num">1</span>)             <span class="cm"># (3,1) column vec</span>`,
+ hi:"view() is faster but fails on non-contiguous tensors. Use reshape() when in doubt — it handles both cases."},
+
+{n:"04",title:"Indexing & Slicing",sub:"Navigate your tensors",
+ pts:["<code>A[row, col]</code> — single element (prefer over A[row][col])",
+      "<code>A[:, 2]</code> — all rows, column 2 only",
+      "<code>A[1:3, :]</code> — rows 1 and 2 (stop is exclusive)",
+      "<code>A[::2, :]</code> — every other row",
+      "<code>A[-1, :]</code> — last row (negative indexing)",
+      "<code>A[[0,2,4], :]</code> — fancy indexing with a list"],
+ code:`<span class="cm"># Select col 2 across all rows</span>
+col = A[:, <span class="num">2</span>]
+
+<span class="cm"># Set rows 1,3,5,... cols 3–18 to zero</span>
+A[<span class="num">1</span>::<span class="num">2</span>, <span class="num">3</span>:<span class="num">19</span>] = <span class="num">0</span>
+
+<span class="cm"># Fancy indexing — specific rows</span>
+rows = A[[<span class="num">0</span>, <span class="num">2</span>, <span class="num">4</span>], :]`,
+ hi:"PyTorch indexing syntax is identical to NumPy. The only difference: fancy-indexed results never share memory."},
+
+{n:"05",title:"Boolean Indexing & torch.where",sub:"Conditional selection",
+ pts:["<code>A &gt; 0</code> — bool tensor, same shape as A",
+      "<code>A[A &gt; 0]</code> — 1D tensor of matching elements",
+      "<code>torch.where(cond, x, y)</code> — vectorized if-else",
+      "<code>(A &gt; 0) &amp; (A &lt; 5)</code> — combine with <code>&amp;</code> / <code>|</code> (not Python <code>and</code>!)",
+      "<code>A.sum(A &gt; 3)</code> — count True values (bool = 0/1)",
+      "<code>torch.clamp(A, 0, 1)</code> — clamp to [0, 1]"],
+ code:`<span class="cm"># ReLU — three equivalent ways</span>
+relu = torch.<span class="fn">where</span>(A &gt; <span class="num">0</span>, A, torch.<span class="fn">zeros_like</span>(A))
+relu = torch.<span class="fn">clamp</span>(A, <span class="kw">min</span>=<span class="num">0</span>)
+relu = torch.nn.functional.<span class="fn">relu</span>(A)
+
+<span class="cm"># Count and filter</span>
+n_pos = (A &gt; <span class="num">0</span>).<span class="fn">sum</span>()
+mask = (A &gt; <span class="num">0</span>) &amp; (A &lt; <span class="num">5</span>)`,
+ hi:"torch.clamp(A, min=0) is the fastest ReLU — a single fused op. Use F.relu() in nn.Module forward passes."},
+
+{n:"06",title:"Random Generation",sub:"Seeds and distributions",
+ pts:["<code>torch.manual_seed(42)</code> — set global seed for reproducibility",
+      "<code>torch.rand(m, n)</code> — uniform [0,&nbsp;1), takes separate ints",
+      "<code>torch.randn(m, n)</code> — standard normal N(0,&nbsp;1)",
+      "<code>torch.randint(low, high, (m, n))</code> — ints in [low, high)",
+      "<code>g = torch.Generator(); g.manual_seed(42)</code> — local generator",
+      "<code>torch.rand(m, n, generator=g)</code> — use local generator"],
+ code:`torch.<span class="fn">manual_seed</span>(<span class="num">42</span>)
+U = torch.<span class="fn">rand</span>(<span class="num">3</span>, <span class="num">4</span>)         <span class="cm"># [0,1)</span>
+N = torch.<span class="fn">randn</span>(<span class="num">3</span>, <span class="num">4</span>)        <span class="cm"># N(0,1)</span>
+I = torch.<span class="fn">randint</span>(<span class="num">0</span>, <span class="num">10</span>, (<span class="num">5</span>, <span class="num">5</span>)) <span class="cm"># [0,9]</span>
+
+g = torch.<span class="fn">Generator</span>().<span class="fn">manual_seed</span>(<span class="num">42</span>)
+W = torch.<span class="fn">randn</span>(<span class="num">128</span>, <span class="num">64</span>, generator=g)`,
+ hi:"torch.rand/randn take ints directly (not a tuple). torch.randint always needs a size tuple as third arg."},
+
+{n:"07",title:"Linear Algebra",sub:"torch.linalg",
+ pts:["<code>A @ B</code> — matrix multiply (works identically to NumPy!)",
+      "<code>A * B</code> — element-wise (Hadamard) product",
+      "<code>A.T</code> — transpose for 2D; use <code>A.transpose(0,1)</code> for N-D",
+      "<code>torch.linalg.det(A)</code> — determinant",
+      "<code>torch.linalg.solve(A, b)</code> — solve Ax=b (prefer over inv!)",
+      "<code>torch.linalg.norm(v)</code> — L2 norm by default",
+      "<code>torch.mm(A, B)</code> — 2D only; <code>torch.matmul</code> handles batches"],
+ code:`C = A <span class="op">@</span> B                     <span class="cm"># matrix product</span>
+D = A <span class="op">*</span> B                     <span class="cm"># element-wise</span>
+AT = A.T                       <span class="cm"># 2D transpose</span>
+AT3 = A.<span class="fn">transpose</span>(<span class="num">0</span>, <span class="num">2</span>)      <span class="cm"># 3D swap axes 0&2</span>
+x = torch.linalg.<span class="fn">solve</span>(A, b)  <span class="cm"># ← prefer this</span>
+n = torch.linalg.<span class="fn">norm</span>(v)      <span class="cm"># L2 norm</span>`,
+ hi:"torch.mm is strict 2D. torch.matmul and @ handle batches: (B,m,k)@(B,k,n)→(B,m,n). Always use @ in practice."},
+
+{n:"08",title:"Aggregations & Stats",sub:"Reduce along dims",
+ pts:["PyTorch uses <code>dim=</code> where NumPy uses <code>axis=</code>",
+      "<code>A.mean(dim=0)</code> — mean of each column (collapse rows)",
+      "<code>A.mean(dim=1)</code> — mean of each row (collapse columns)",
+      "<code>keepdim=True</code> (not keepdims!) — preserve collapsed dim as size&nbsp;1",
+      "<code>A.std()</code>, <code>A.sum()</code>, <code>A.max()</code>, <code>torch.argmax(A, dim=1)</code>",
+      "Z-score: <code>(A − A.mean(dim=0)) / A.std(dim=0)</code>"],
+ code:`A = torch.<span class="fn">randn</span>(<span class="num">100</span>, <span class="num">10</span>)
+A.<span class="fn">mean</span>()                     <span class="cm"># scalar</span>
+A.<span class="fn">mean</span>(dim=<span class="num">0</span>)               <span class="cm"># shape (10,)</span>
+A.<span class="fn">mean</span>(dim=<span class="num">1</span>)               <span class="cm"># shape (100,)</span>
+<span class="cm"># Per-feature normalization</span>
+A_n = (A - A.<span class="fn">mean</span>(dim=<span class="num">0</span>)) / A.<span class="fn">std</span>(dim=<span class="num">0</span>)`,
+ hi:"dim=0 collapses rows; dim=1 collapses columns. Same mental model as NumPy axis=, just renamed."},
+
+{n:"09",title:"Broadcasting",sub:"Operations on compatible shapes",
+ pts:["Rules are identical to NumPy: trailing dims must match or be 1.",
+      "<code>(3,4) + (4,)</code> → OK, <code>(4,)</code> broadcasts to <code>(3,4)</code>",
+      "<code>(3,1) + (1,4)</code> → <code>(3,4)</code> — both dims broadcast",
+      "<code>torch.cat([A, B], dim=1)</code> — concatenate (needs matching non-cat dims)",
+      "<code>torch.stack([a, b], dim=0)</code> — creates a new axis",
+      "<code>a.unsqueeze(1)</code> makes <code>(3,)</code> → <code>(3,1)</code> for column broadcasting"],
+ code:`A = torch.<span class="fn">zeros</span>(<span class="num">3</span>, <span class="num">4</span>)
+b = torch.<span class="fn">ones</span>(<span class="num">4</span>)           <span class="cm"># (4,)</span>
+C = A + b   <span class="cm"># (3,4) — broadcasts!</span>
+
+<span class="cm"># Center each row (keepdim keeps (100,1))</span>
+mu = A.<span class="fn">mean</span>(dim=<span class="num">1</span>, keepdim=<span class="kw">True</span>)
+A_c = A - mu   <span class="cm"># (3,4)-(3,1) → (3,4)</span>`,
+ hi:"torch.stack creates a new axis; torch.cat does not. Two (3,) tensors stacked → (2,3). Concatenated → (6,)."},
+
+{n:"10",title:"Autograd",sub:"The key difference from NumPy",
+ pts:["<code>requires_grad=True</code> — tell PyTorch to track ops on this tensor",
+      "Call <code>loss.backward()</code> — gradients flow back through the graph",
+      "Gradients accumulate in <code>tensor.grad</code> — call <code>optimizer.zero_grad()</code> first!",
+      "<code>torch.no_grad()</code> — disable grad tracking (inference, validation)",
+      "<code>tensor.detach()</code> — get a tensor view with no grad history",
+      "Leaf tensors: parameters you create. Non-leaf: results of ops on leaves."],
+ code:`x = torch.<span class="fn">randn</span>(<span class="num">3</span>, requires_grad=<span class="kw">True</span>)
+loss = (x ** <span class="num">2</span>).<span class="fn">sum</span>()
+loss.<span class="fn">backward</span>()   <span class="cm"># fills x.grad</span>
+<span class="cm"># x.grad == 2*x</span>
+
+optimizer.<span class="fn">zero_grad</span>()  <span class="cm"># ← always before backward!</span>
+<span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+    preds = model(X_val)  <span class="cm"># no grad overhead</span>`,
+ hi:"Forgetting zero_grad() causes gradients to accumulate across batches — a very common bug in training loops."},
+];
+
+// ── QUESTION DATA ───────────────────────────────────────────────────────────
+const QS = [
+// --- Tensor Creation ---
+{t:"Tensor Creation",
+ q:"Which call creates a 3×4 matrix of all zeros?",
+ opts:["torch.zeros(3, 4)","torch.zero((3, 4))","torch.zeros([3][4])","torch.empty(3, 4)"],
+ a:0, ex:"torch.zeros() accepts separate ints or a tuple: torch.zeros(3,4) and torch.zeros((3,4)) both work. torch.empty() leaves memory uninitialized."},
+{t:"Tensor Creation",
+ q:"torch.eye(4) creates a...",
+ opts:["4-element tensor of ones","4×4 identity matrix","4×4 matrix of fours","4×4 matrix of zeros"],
+ a:1, ex:"torch.eye(n) makes an n×n identity matrix — 1s on diagonal, 0s elsewhere. Same as np.eye(n)."},
+{t:"Tensor Creation",
+ q:"torch.arange(0, 10, 2) produces:",
+ opts:["tensor([0,2,4,6,8,10])","tensor([0,2,4,6,8])","tensor([2,4,6,8])","tensor([0,2,4,6,8,9])"],
+ a:1, ex:"arange(start, stop, step) excludes stop. 0,2,4,6,8 — five values before reaching 10. Same as NumPy."},
+{t:"Tensor Creation",
+ q:"torch.linspace(0, 1, 5) returns:",
+ opts:["tensor([0.00,0.25,0.50,0.75])","tensor([0.00,0.25,0.50,0.75,1.00])","tensor([0,0.2,0.4,0.6,0.8,1.0])","tensor([0.0,0.5,1.0,1.5,2.0])"],
+ a:1, ex:"linspace(start, stop, steps) is inclusive of stop and returns exactly steps values. Note: third arg is steps, not step size."},
+{t:"Tensor Creation",
+ q:"What is the key difference between torch.tensor([1.0]) and torch.Tensor([1.0])?",
+ opts:["They are identical","tensor() infers dtype from data; Tensor() always creates float32","Tensor() infers dtype; tensor() always creates float32","tensor() requires grad by default; Tensor() does not"],
+ a:1, ex:"torch.tensor() copies data and infers dtype. torch.Tensor() is an alias for torch.FloatTensor — always float32. Use torch.tensor() for clarity."},
+{t:"Tensor Creation",
+ q:"torch.zeros_like(A) returns:",
+ opts:["A copy of A","Zeros with A's shape and dtype","A zero scalar","torch.zeros((A.ndim,))"],
+ a:1, ex:"zeros_like() mirrors shape and dtype — critical when you need an all-zero gradient buffer or mask matching your activations."},
+{t:"Tensor Creation",
+ q:"A = torch.ones(2, 3, 4). What is A.ndim?",
+ opts:["2","3","4","24"],
+ a:1, ex:"ndim counts axes. Shape (2,3,4) has 3 dimensions. Same as NumPy's .ndim."},
+{t:"Tensor Creation",
+ q:"What does the -1 mean in t.reshape(-1, 4)?",
+ opts:["Reverse the tensor","Infer that dimension from total elements","Use -1 as a fill value","Keep the original last axis"],
+ a:1, ex:"Passing -1 tells PyTorch: 'you figure out this dimension.' If t has 12 elements, reshape(-1,4) → (3,4)."},
+
+// --- Indexing & Slicing ---
+{t:"Indexing & Slicing",
+ q:"A is shape (5, 6). How do you select all rows, column 2 only?",
+ opts:["A[2]","A[:, 2]","A[2, :]","A[*, 2]"],
+ a:1, ex:"A[:, 2] means 'all rows (:), column index 2'. A[2, :] gives all of row 2. Same syntax as NumPy."},
+{t:"Indexing & Slicing",
+ q:"How do you get rows 1 and 2 (not row 3) from tensor A?",
+ opts:["A[1:3, :]","A[1:2, :]","A[1,2, :]","A[[1,2,3], :]"],
+ a:0, ex:"Python slicing is exclusive on the right: A[1:3] gives indices 1 and 2. A[1:2] gives only index 1."},
+{t:"Indexing & Slicing",
+ q:"How do you get every other row (0, 2, 4, …) from A?",
+ opts:["A[0,2,4, :]","A[even, :]","A[::2, :]","A[0::1, :]"],
+ a:2, ex:"A[::2, :] uses step=2. The slice syntax is start:stop:step. No start/stop means beginning to end."},
+{t:"Indexing & Slicing",
+ q:"How do you get the last row of A without knowing its size?",
+ opts:["A[last, :]","A[-1, :]","A[end, :]","A[A.shape[0]-1]"],
+ a:1, ex:"Negative indices count from the end. A[-1] is the last row. Cleaner and more Pythonic."},
+{t:"Indexing & Slicing",
+ q:"A[[0, 2, 4], :] is an example of:",
+ opts:["Boolean indexing","Fancy (integer-list) indexing","Slice indexing","View indexing"],
+ a:1, ex:"Passing a list of integers is fancy indexing — it selects specific rows by position. Unlike slicing, it always returns a copy in PyTorch."},
+{t:"Indexing & Slicing",
+ q:"A is (10, 20). A[2:8:2, 5:15] selects which rows and columns?",
+ opts:["Rows 2,4,6,8 and cols 5-15","Rows 2,4,6 and cols 5-14","Rows 2,4,6 and cols 5-15","Rows 2,4,6,8 and cols 5-14"],
+ a:1, ex:"2:8:2 = [2,4,6] (stop 8 excluded). 5:15 = cols [5..14] (stop 15 excluded). Step doesn't change the exclusive-stop rule."},
+{t:"Indexing & Slicing",
+ q:"What does t.view(-1) return?",
+ opts:["A reversed tensor","A flattened 1D view","An error — view requires explicit shape","A 1D copy of t"],
+ a:1, ex:"t.view(-1) flattens to 1D by inferring the single dimension. It's a view (no copy) if memory is contiguous, equivalent to t.reshape(-1)."},
+
+// --- Boolean Indexing ---
+{t:"Boolean Indexing",
+ q:"Which expression correctly implements ReLU on tensor A?",
+ opts:["A[A > 0]","torch.where(A > 0, A, torch.zeros_like(A))","A.relu_()","torch.relu(A) or torch.clamp(A, min=0)"],
+ a:3, ex:"Both torch.relu(A) and torch.clamp(A, min=0) correctly compute ReLU. torch.where also works. A[A>0] returns only positive elements, not same shape."},
+{t:"Boolean Indexing",
+ q:"How do you select elements of A that are between 0 and 5 (exclusive)?",
+ opts:["A[0 < A < 5]","A[(A > 0) & (A < 5)]","A[(A > 0) and (A < 5)]","A[A.between(0, 5)]"],
+ a:1, ex:"Use & for element-wise AND on tensors. Python's 'and' raises a RuntimeError on multi-element tensors."},
+{t:"Boolean Indexing",
+ q:"torch.where(A > 0, 1.0, -1.0) does what?",
+ opts:["Returns indices where A > 0","Returns +1 where A>0, -1 elsewhere","Returns A clipped to [-1, 1]","Raises TypeError"],
+ a:1, ex:"torch.where(cond, x, y) → vectorized sign function. This pattern is the sign activation, subgradient of absolute value."},
+{t:"Boolean Indexing",
+ q:"How do you count the number of elements in A that are greater than 3?",
+ opts:["len(A[A > 3])","torch.count(A > 3)","(A > 3).sum()","A.count(A > 3)"],
+ a:2, ex:"Boolean tensors are 0/1 integers. (A > 3).sum() sums all the True (=1) values. Clean and vectorized."},
+{t:"Boolean Indexing",
+ q:"torch.clamp(A, 0, 1) does what?",
+ opts:["Removes values outside [0,1]","Clamps values: below 0→0, above 1→1","Rescales A to [0,1]","Returns True where A is in [0,1]"],
+ a:1, ex:"clamp() saturates values at the bounds. Values in range are unchanged. Equivalent to np.clip() in NumPy."},
+
+// --- Random Generation ---
+{t:"Random Generation",
+ q:"What is the PyTorch way to set a global reproducible seed?",
+ opts:["torch.seed(42)","torch.manual_seed(42)","torch.random.seed(42)","random.seed(42)"],
+ a:1, ex:"torch.manual_seed(42) sets the seed for the CPU RNG. For full reproducibility also set numpy and Python random seeds."},
+{t:"Random Generation",
+ q:"torch.rand(3, 4) generates values in which range?",
+ opts:["(-1, 1)","[0, 1)","[0, 1]","N(0,1)"],
+ a:1, ex:"torch.rand generates uniform floats in [0,1). Note it takes separate ints, unlike np.random.default_rng().random() which takes a tuple."},
+{t:"Random Generation",
+ q:"torch.randn(3, 4) draws from which distribution?",
+ opts:["Uniform [0,1)","Uniform [-1,1)","Standard normal N(0,1)","Standard normal N(0,0.01)"],
+ a:2, ex:"torch.randn draws from standard normal N(0,1). For N(μ,σ²): mean + std * torch.randn(shape)."},
+{t:"Random Generation",
+ q:"torch.randint(0, 10, (5, 5)) generates values in which range?",
+ opts:["Floats 0.0 to 10.0","Integers 0 to 10 inclusive","Integers 0 to 9","5 integers from 0 to 5"],
+ a:2, ex:"randint(low, high, size) excludes high by default — values in [0, 9]. The size must be a tuple. Same exclusive-high behavior as Python's range."},
+{t:"Random Generation",
+ q:"How do you create a reproducible local random generator (without affecting the global seed)?",
+ opts:["torch.seed(42)","g = torch.Generator().manual_seed(42)","torch.local_seed(42)","torch.set_default_seed(42)"],
+ a:1, ex:"torch.Generator() creates an isolated RNG. Pass it as generator=g to rand/randn/randint. Useful for reproducible data augmentation without touching global state."},
+
+// --- Linear Algebra ---
+{t:"Linear Algebra",
+ q:"A is (3,4), B is (4,5). Which expression gives the correct matrix product?",
+ opts:["A * B","torch.multiply(A, B)","A @ B","torch.dot(A, B)"],
+ a:2, ex:"@ is the matrix multiplication operator. A*B is element-wise and would fail here — shapes don't match. torch.dot only works on 1D vectors."},
+{t:"Linear Algebra",
+ q:"How do you transpose a 2D tensor A?",
+ opts:["A.transpose()","A.T","torch.flip(A)","A[::-1]"],
+ a:1, ex:"A.T is the cleanest way for 2D. For N-D tensors use A.transpose(dim0, dim1) or A.permute(dims). torch.flip reverses elements, not the same thing."},
+{t:"Linear Algebra",
+ q:"torch.linalg.solve(A, b) is preferred over torch.linalg.inv(A) @ b because:",
+ opts:["solve() is faster and numerically more stable","inv() doesn't exist in PyTorch","solve() returns a matrix","They give different answers"],
+ a:0, ex:"solve() uses LU decomposition directly — it never forms the full inverse. Faster and avoids amplifying floating-point errors. Same reason as NumPy."},
+{t:"Linear Algebra",
+ q:"What is the difference between torch.mm and torch.matmul?",
+ opts:["mm is faster; matmul is more accurate","mm is 2D-only; matmul handles batched/N-D tensors","matmul is 2D-only; mm handles batched tensors","They are identical"],
+ a:1, ex:"torch.mm(A,B) requires both inputs to be exactly 2D. torch.matmul (and @) handle batch dims: (B,m,k)@(B,k,n)→(B,m,n). Use @ in practice."},
+{t:"Linear Algebra",
+ q:"How do you compute the L2 norm of a tensor v?",
+ opts:["torch.norm(v)","v.norm()","torch.linalg.norm(v)","torch.l2(v)"],
+ a:2, ex:"torch.linalg.norm(v) is the modern API. The older torch.norm() is deprecated. Add ord=1 for L1 norm."},
+{t:"Linear Algebra",
+ q:"A and B have the same shape. A * B computes:",
+ opts:["Matrix (dot) product","Element-wise Hadamard product","Outer product","Cross product"],
+ a:1, ex:"* is always element-wise in PyTorch — same as NumPy. Use @ or torch.matmul() for matrix multiplication. Never confuse them in neural net code!"},
+{t:"Linear Algebra",
+ q:"torch.linalg.det([[1,2],[3,4]]) returns approximately:",
+ opts:["10.0","−2.0","2.0","−10.0"],
+ a:1, ex:"det = 1×4 − 2×3 = 4 − 6 = −2. Negative determinant means the linear map includes a reflection."},
+
+// --- Aggregations ---
+{t:"Aggregations",
+ q:"A is shape (4, 5). What is A.mean(dim=0).shape?",
+ opts:["(4,)","(5,)","(4, 5)","scalar"],
+ a:1, ex:"dim=0 collapses the row dimension, leaving one value per column. 4 rows collapse → shape (5,). The dim 'disappears'."},
+{t:"Aggregations",
+ q:"A is shape (4, 5). What is A.sum(dim=1).shape?",
+ opts:["(4,)","(5,)","(4, 5)","scalar"],
+ a:0, ex:"dim=1 collapses the column dimension, leaving one sum per row. 5 cols collapse → shape (4,)."},
+{t:"Aggregations",
+ q:"What is the PyTorch equivalent of NumPy's keepdims=True?",
+ opts:["keepdims=True","keepdim=True","keep_dim=True","retain_dims=True"],
+ a:1, ex:"PyTorch uses keepdim (no 's'). A.mean(dim=0, keepdim=True) returns shape (1,5) instead of (5,), preserving the axis for broadcasting."},
+{t:"Aggregations",
+ q:"How do you Z-score normalize tensor A (zero mean, unit variance)?",
+ opts:["A / A.max()","(A - A.min()) / (A.max() - A.min())","(A - A.mean()) / A.std()","torch.normalize(A)"],
+ a:2, ex:"Subtract mean to center, divide by std to scale. Z-score is the most common normalization for ML features. torch.nn.functional.normalize() does L2 norm normalization, not Z-score."},
+{t:"Aggregations",
+ q:"torch.argmax(A, dim=1) on a (32, 10) tensor returns shape:",
+ opts:["(32, 10)","(10,)","(32,)","scalar"],
+ a:2, ex:"argmax with dim=1 collapses the class dimension (10) to the index of the max per row. Returns (32,) — one class index per sample. Common in classification."},
+{t:"Aggregations",
+ q:"A is (32, 10). You want to subtract each row's mean. Which is correct?",
+ code:`row_means = A.mean(dim=1)    # shape (32,)
+A_centered = A - row_means   # does this work?`,
+ opts:["Yes — shapes (32,10) and (32,) broadcast correctly","No — need A - row_means.unsqueeze(1)","No — need torch.broadcast_to(row_means, A.shape)","Yes — PyTorch auto-aligns trailing axes"],
+ a:1, ex:"(32,10) - (32,) fails: trailing dims 10≠32. With unsqueeze(1) or keepdim=True, row_means becomes (32,1) and broadcasts correctly to (32,10)."},
+
+// --- Broadcasting ---
+{t:"Broadcasting",
+ q:"Can you add a tensor of shape (3, 4) to one of shape (4,)?",
+ opts:["No — shapes must match exactly","Yes — (4,) broadcasts to (3,4)","Yes — only if values are 0 or 1","No — use torch.broadcast_to first"],
+ a:1, ex:"PyTorch broadcasts (4,) to (3,4) by repeating along dim 0. The rule is identical to NumPy: trailing dims must match or be 1."},
+{t:"Broadcasting",
+ q:"A is shape (3,1), B is shape (1,4). What is (A + B).shape?",
+ opts:["(3, 4)","(1, 4)","(3, 1)","Error"],
+ a:0, ex:"Both dims broadcast: 3 vs 1 → 3, 1 vs 4 → 4. Result: (3,4). This pattern underlies attention score computation in transformers."},
+{t:"Broadcasting",
+ q:"v = torch.tensor([1, 2, 3]). What is v.unsqueeze(1).shape?",
+ opts:["(3,)","(1, 3)","(3, 1)","(3, 0)"],
+ a:2, ex:"unsqueeze(1) inserts a new axis at position 1. (3,) → (3,1) turns a 1D vector into a column vector. Equivalent to v[:, None] or np.newaxis."},
+{t:"Broadcasting",
+ q:"torch.cat([A, B], dim=1) requires A and B to have:",
+ opts:["Same number of columns","Same number of rows","Identical shapes","Same dtype"],
+ a:1, ex:"Concatenating along dim=1 (adding columns) requires matching rows. The non-concatenated dims must all match. dtype must also match."},
+{t:"Broadcasting",
+ q:"torch.stack([a, b], dim=0) on two shape-(3,) tensors gives shape:",
+ opts:["(6,)","(2, 3)","(3, 2)","(3,)"],
+ a:1, ex:"stack() creates a NEW axis. Two (3,) tensors stacked along dim=0 → (2,3). Compare: cat would give (6,). Stack is how you batch a list of samples."},
+{t:"Broadcasting",
+ q:"A.flatten() vs A.reshape(-1) — the key difference in PyTorch:",
+ opts:["flatten() always returns a copy; reshape(-1) returns a view when possible","reshape(-1) always returns a copy; flatten() is a view","They are identical","flatten() works on N-D; reshape only on 2D"],
+ a:0, ex:"A.flatten() always allocates new memory. A.reshape(-1) or A.view(-1) returns a view when memory is contiguous — faster for large tensors."},
+
+// --- Autograd ---
+{t:"Autograd",
+ q:"How do you create a tensor that PyTorch will track gradients for?",
+ opts:["torch.tensor([1.0], grad=True)","torch.tensor([1.0], requires_grad=True)","torch.tensor([1.0]).track_grad()","torch.grad_tensor([1.0])"],
+ a:1, ex:"requires_grad=True tells PyTorch to record operations on this tensor in the computational graph. Only works on float tensors."},
+{t:"Autograd",
+ q:"After loss.backward(), where is the gradient for parameter x?",
+ opts:["Returned by backward()","Stored in x.grad","Stored in loss.grad","Stored in torch.grad_store"],
+ a:1, ex:"Gradients are accumulated into the .grad attribute of each leaf tensor with requires_grad=True. This is why you must zero them before the next step."},
+{t:"Autograd",
+ q:"Why must you call optimizer.zero_grad() before loss.backward()?",
+ opts:["backward() fails without it","Gradients accumulate by default — not zeroing causes incorrect updates","It frees GPU memory","It resets the loss to zero"],
+ a:1, ex:"PyTorch accumulates (adds) gradients into .grad by default. If you skip zero_grad(), gradients from previous batches persist, corrupting your parameter update."},
+{t:"Autograd",
+ q:"What is the purpose of torch.no_grad()?",
+ opts:["Stops backward() from being called","Disables gradient computation — saves memory and time during inference","Makes tensors immutable","Detaches all tensors from the graph"],
+ a:1, ex:"torch.no_grad() is a context manager that disables gradient tracking. Use it for validation, inference, and weight updates after computing gradients manually."},
+{t:"Autograd",
+ q:"What does tensor.detach() return?",
+ opts:["A copy with requires_grad=True","A tensor that shares data but has no gradient history","A scalar value","The gradient of the tensor"],
+ a:1, ex:"detach() returns a new tensor that shares storage but is detached from the autograd graph. Use it to pass tensors to NumPy or to stop gradient flow at a specific point."},
+{t:"Autograd",
+ q:"Which of these is a 'leaf' tensor in PyTorch autograd?",
+ opts:["The output of a matmul operation","A tensor created directly by the user with requires_grad=True","The result of adding two leaf tensors","loss after calling .backward()"],
+ a:1, ex:"Leaf tensors are those created directly (not computed from other tensors) with requires_grad=True — typically your model parameters. Gradients are only stored in leaf tensors."},
+];
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let slideIdx = 0;
+let qIdx = 0, score = 0, combo = 0, bestCombo = 0;
+let timerVal = 20, timerIv = null, qStart = 0;
+let timings = [], wrongs = [];
+const TIMER_MAX = 20;
+const READ_TIME = 15;
+const CIRCUMFERENCE = 2 * Math.PI * 22; // r=22
+
+// ── SCREENS ─────────────────────────────────────────────────────────────────
+function show(id) {
+  ['intro','slides','game','end'].forEach(x => {
+    document.getElementById(x).hidden = (x !== id);
+  });
+}
+
+function startSlides() { renderSlide(0); show('slides'); }
+function skipToGame()  { startGame(); show('game'); }
+function reviewSlides(){ renderSlide(0); show('slides'); }
+function restartGame() { startGame(); show('game'); }
+
+// ── SLIDES ───────────────────────────────────────────────────────────────────
+function renderSlide(i) {
+  slideIdx = i;
+  const s = SLIDES[i];
+  const body = document.getElementById('sl-body');
+  body.innerHTML = `
+    <div class="sl-chip">Slide ${s.n} / ${SLIDES.length}</div>
+    <h2 class="sl-title">${s.title}</h2>
+    <p class="sl-sub">${s.sub}</p>
+    <div class="sl-grid">
+      <div class="sl-pts">${s.pts.map((p,j)=>`<div class="sl-pt"><div class="sl-pt-n">${j+1}</div><span>${p}</span></div>`).join('')}
+      ${s.hi ? `<div class="hi">${s.hi}</div>` : ''}
+      </div>
+      <pre class="cb">${s.code}</pre>
+    </div>`;
+
+  const dots = document.getElementById('sl-dots');
+  dots.innerHTML = SLIDES.map((_,j)=>`<div class="sl-dot ${j===i?'active':j<i?'done':''}"></div>`).join('');
+
+  document.getElementById('sl-ctr').textContent = `${i+1} / ${SLIDES.length}`;
+  document.getElementById('btn-prev').disabled = (i === 0);
+  const btnNext = document.getElementById('btn-next');
+  if (i === SLIDES.length - 1) {
+    btnNext.textContent = 'Start Game ▶';
+    btnNext.onclick = () => { startGame(); show('game'); };
+  } else {
+    btnNext.textContent = 'Next →';
+    btnNext.onclick = nextSlide;
+  }
+}
+
+function nextSlide() { if (slideIdx < SLIDES.length-1) renderSlide(slideIdx+1); }
+function prevSlide() { if (slideIdx > 0) renderSlide(slideIdx-1); }
+
+// ── GAME ─────────────────────────────────────────────────────────────────────
+function startGame() {
+  qIdx = 0; score = 0; combo = 0; bestCombo = 0;
+  timings = []; wrongs = [];
+  updateScore(); updateCombo();
+  renderQ(0);
+}
+
+function renderQ(i) {
+  clearInterval(timerIv);
+  const q = QS[i];
+
+  document.getElementById('g-topic').textContent = q.t;
+  document.getElementById('g-qlbl').textContent = `Q ${i+1} / ${QS.length}`;
+  document.getElementById('q-chip').textContent = q.t;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('prog').style.width = `${(i/QS.length)*100}%`;
+
+  const codeEl = document.getElementById('q-code');
+  if (q.code) { codeEl.textContent = q.code; codeEl.style.display='block'; }
+  else { codeEl.style.display='none'; }
+
+  document.getElementById('expl').className = 'expl';
+  document.getElementById('expl').innerHTML = '';
+  document.getElementById('next-row').style.display = 'none';
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = q.opts.map((o,j)=>`
+    <button class="opt" onclick="answer(${j})" data-idx="${j}">
+      <span class="o-ltr">${'ABCD'[j]}</span>${o}
+    </button>`).join('');
+
+  const card = document.getElementById('q-card');
+  card.classList.remove('anim');
+  void card.offsetWidth;
+  card.classList.add('anim');
+
+  startReading();
+}
+
+function setOptsDisabled(disabled) {
+  document.querySelectorAll('.opt').forEach(b => b.disabled = disabled);
+}
+
+function startReading() {
+  setOptsDisabled(true);
+  let readVal = READ_TIME;
+  updateReadingUI(readVal);
+  timerIv = setInterval(() => {
+    readVal--;
+    if (readVal <= 0) {
+      clearInterval(timerIv);
+      setOptsDisabled(false);
+      startTimer();
+    } else {
+      updateReadingUI(readVal);
+    }
+  }, 1000);
+}
+
+function updateReadingUI(v) {
+  document.getElementById('t-txt').textContent = '📖';
+  const fill = document.getElementById('t-fill');
+  const offset = CIRCUMFERENCE * (1 - v / READ_TIME);
+  fill.style.strokeDashoffset = offset;
+  fill.className = 't-fill read';
+}
+
+function startTimer() {
+  timerVal = TIMER_MAX;
+  qStart = Date.now();
+  updateTimerUI(TIMER_MAX);
+  timerIv = setInterval(() => {
+    timerVal--;
+    updateTimerUI(timerVal);
+    if (timerVal <= 0) { clearInterval(timerIv); timeUp(); }
+  }, 1000);
+}
+
+function updateTimerUI(v) {
+  document.getElementById('t-txt').textContent = v;
+  const fill = document.getElementById('t-fill');
+  const offset = CIRCUMFERENCE * (1 - v / TIMER_MAX);
+  fill.style.strokeDashoffset = offset;
+  fill.className = 't-fill' + (v <= 5 ? ' danger' : v <= 10 ? ' warn' : '');
+}
+
+function timeUp() {
+  const elapsed = TIMER_MAX;
+  timings.push(elapsed);
+  const q = QS[qIdx];
+  wrongs.push({idx: qIdx, q: q.q, correct: q.opts[q.a], chose: 'Timed out'});
+  combo = 0; updateCombo();
+  markOptions(q.a, -1);
+  showExpl(q.ex);
+}
+
+function answer(chosen) {
+  clearInterval(timerIv);
+  const elapsed = (Date.now() - qStart) / 1000;
+  timings.push(Math.min(elapsed, TIMER_MAX));
+  const q = QS[qIdx];
+  const correct = chosen === q.a;
+
+  if (correct) {
+    const pts = Math.max(10, Math.floor(100 - elapsed * 4));
+    let mult = combo >= 5 ? 1.5 : combo >= 3 ? 1.25 : 1;
+    const earned = Math.round(pts * mult);
+    score += earned;
+    combo++;
+    if (combo > bestCombo) bestCombo = combo;
+    showPopup(`+${earned}${mult > 1 ? ' ×'+mult : ''}`);
+  } else {
+    wrongs.push({idx: qIdx, q: q.q, correct: q.opts[q.a], chose: q.opts[chosen]});
+    combo = 0;
+  }
+  updateScore(); updateCombo();
+  markOptions(q.a, chosen);
+  showExpl(q.ex);
+}
+
+function markOptions(correctIdx, chosenIdx) {
+  document.querySelectorAll('.opt').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correctIdx) btn.classList.add('correct');
+    else if (i === chosenIdx) btn.classList.add('wrong');
+  });
+  const nr = document.getElementById('next-row');
+  nr.style.display = 'flex';
+  const remaining = QS.length - qIdx - 1;
+  document.getElementById('q-ctr').textContent =
+    remaining > 0 ? `${remaining} question${remaining>1?'s':''} remaining` : 'Last question!';
+}
+
+function showExpl(text) {
+  const el = document.getElementById('expl');
+  el.innerHTML = `<strong>Explanation:</strong> ${text}`;
+  el.classList.add('show');
+}
+
+function nextQ() {
+  qIdx++;
+  if (qIdx >= QS.length) { endGame(); return; }
+  renderQ(qIdx);
+}
+
+function updateScore() { document.getElementById('g-score').textContent = score; }
+function updateCombo() {
+  const box = document.getElementById('g-cbox');
+  document.getElementById('g-combo').textContent = `×${combo >= 5 ? 1.5 : combo >= 3 ? 1.25 : 1}`;
+  box.classList.toggle('hot', combo >= 3);
+}
+
+function showPopup(msg) {
+  const pp = document.getElementById('pp');
+  pp.textContent = msg;
+  pp.classList.add('show');
+  setTimeout(() => pp.classList.remove('show'), 1400);
+}
+
+// ── END SCREEN ───────────────────────────────────────────────────────────────
+function endGame() {
+  clearInterval(timerIv);
+  const total = QS.length;
+  const correct = total - wrongs.length;
+  const acc = Math.round((correct / total) * 100);
+  const avgTime = timings.length ? (timings.reduce((a,b)=>a+b,0)/timings.length).toFixed(1) : 0;
+
+  document.getElementById('end-score').textContent = score;
+  document.getElementById('r-correct').textContent = `${correct}/${total}`;
+  document.getElementById('r-acc').textContent = `${acc}%`;
+  document.getElementById('r-combo').textContent = `×${bestCombo >= 5 ? 1.5 : bestCombo >= 3 ? 1.25 : 1} (${bestCombo})`;
+  document.getElementById('r-speed').textContent = `${avgTime}s`;
+
+  const trophy = score >= 3500 ? '🏆' : score >= 2500 ? '🥇' : score >= 1500 ? '🥈' : '🥉';
+  const rankCls = score >= 3500 ? 'rank-s' : score >= 2500 ? 'rank-a' : score >= 1500 ? 'rank-b' : 'rank-c';
+  const rankTxt = score >= 3500 ? 'S Rank — PyTorch Sensei!' : score >= 2500 ? 'A Rank — Dojo Master' : score >= 1500 ? 'B Rank — Practitioner' : 'C Rank — Keep Training';
+  document.getElementById('end-trophy').textContent = trophy;
+  document.getElementById('end-ttl').textContent = score >= 3500 ? 'Legendary!' : score >= 2500 ? 'Excellent!' : 'Dojo Complete!';
+  const rankEl = document.getElementById('end-rank');
+  rankEl.textContent = rankTxt;
+  rankEl.className = `rank ${rankCls}`;
+
+  const wrap = document.getElementById('missed-wrap');
+  if (wrongs.length === 0) {
+    wrap.innerHTML = '<div style="color:#a6e3a1;text-align:center;margin-bottom:16px;font-size:1rem;">🎯 Perfect score! All correct!</div>';
+  } else {
+    wrap.innerHTML = `<div style="color:#a8b8d8;font-size:.82rem;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Missed (${wrongs.length})</div>` +
+      wrongs.slice(0,8).map(w=>`<div class="mi"><strong>${w.q}</strong>You chose: ${w.chose}<div class="mi-ans">✓ ${w.correct}</div></div>`).join('') +
+      (wrongs.length > 8 ? `<div style="color:#a8b8d8;font-size:.82rem;text-align:center;">…and ${wrongs.length-8} more</div>` : '');
+  }
+
+  show('end');
+}
+</script>
+</body>
+</html>
