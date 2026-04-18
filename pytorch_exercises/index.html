@@ -237,7 +237,7 @@ out = np.<span class="fn">maximum</span>(<span class="num">0</span>, X <span cla
 <span class="cm"># PyTorch — almost identical + grad tracking</span>
 W = torch.<span class="fn">randn</span>(<span class="num">128</span>, <span class="num">64</span>, requires_grad=<span class="kw">True</span>)
 out = torch.<span class="fn">relu</span>(X <span class="op">@</span> W.T)  <span class="cm"># grad tracked!</span>`,
- hi:"You already know 80% of PyTorch from NumPy. The rest is autograd, nn.Module, and device management."},
+ hi:"NumPy practitioners already know 80% of PyTorch — it is largely a namespace swap. The key additions are autograd, nn.Module, and device management."},
 
 {n:"02",title:"Tensor Creation",sub:"The building blocks",
  pts:["<code>torch.tensor([1,2,3])</code> — from Python list, infers dtype",
@@ -516,7 +516,7 @@ const QS = [
 {t:"Linear Algebra",
  q:"How do you compute the L2 norm of a tensor v?",
  opts:["torch.norm(v)","v.norm()","torch.linalg.norm(v)","torch.l2(v)"],
- a:2, ex:"torch.linalg.norm(v) is the modern API. The older torch.norm() is deprecated. Add ord=1 for L1 norm."},
+ a:2, ex:"torch.linalg.norm(v) is the recommended API (introduced in PyTorch 1.7). torch.norm() still works but is officially deprecated in PyTorch docs — prefer torch.linalg.norm(). Add ord=1 for L1 norm."},
 {t:"Linear Algebra",
  q:"A and B have the same shape. A * B computes:",
  opts:["Matrix (dot) product","Element-wise Hadamard product","Outer product","Cross product"],

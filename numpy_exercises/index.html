@@ -493,7 +493,7 @@ const QS = [
 {t:"Random Generation",
  q:"To draw a 2×3 matrix from the standard normal distribution N(0,1):",
  opts:["rng.rand((2,3))","rng.randn((2,3))","rng.standard_normal((2,3))","rng.normal(size=(2,3))"],
- a:2, ex:"rng.standard_normal(shape) draws from N(0,1). The old np.random.randn() style is deprecated — use the Generator API."},
+ a:2, ex:"rng.standard_normal(shape) draws from N(0,1). The old np.random.randn() is the legacy interface — it still works but lacks reproducibility controls. The Generator API is the recommended approach for new code."},
 {t:"Random Generation",
  q:"rng.integers(0, 10, size=(5, 5)) generates values in which range?",
  opts:["Floats from 0.0 to 10.0","Integers 0 to 10 inclusive","Integers 0 to 9","5 integers from 0 to 5"],
