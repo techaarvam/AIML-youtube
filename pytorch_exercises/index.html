@@ -356,6 +356,7 @@ A_n = (A - A.<span class="fn">mean</span>(dim=<span class="num">0</span>)) / A.<
  pts:["Rules are identical to NumPy: trailing dims must match or be 1.",
       "<code>(3,4) + (4,)</code> → OK, <code>(4,)</code> broadcasts to <code>(3,4)</code>",
       "<code>(3,1) + (1,4)</code> → <code>(3,4)</code> — both dims broadcast",
+      "<code>(3,2) + (2,4)</code> → <strong>ERROR</strong> — not matmul; trailing 2 ≠ 4, inner dims don't cancel",
       "<code>torch.cat([A, B], dim=1)</code> — concatenate (needs matching non-cat dims)",
       "<code>torch.stack([a, b], dim=0)</code> — creates a new axis",
       "<code>a.unsqueeze(1)</code> makes <code>(3,)</code> → <code>(3,1)</code> for column broadcasting"],
