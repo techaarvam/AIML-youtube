@@ -79,15 +79,22 @@ pre.cb .op{color:var(--cop);}
 .cbox.hot{background:rgba(245,192,122,.22);border-color:#f5c07a;}
 .clbl{font-size:.6rem;color:#a8b8d8;text-transform:uppercase;letter-spacing:.06em;}
 .cval{font-size:.95rem;font-weight:700;color:#f5c07a;}
-.tw{position:relative;width:52px;height:52px;flex-shrink:0;}
-.tr{transform:rotate(-90deg);width:52px;height:52px;}
-.t-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:4;}
+.tw{position:relative;width:68px;height:68px;flex-shrink:0;}
+.tr{transform:rotate(-90deg);width:68px;height:68px;}
+.t-track{fill:none;stroke:var(--line);stroke-width:4;}
 .t-fill{fill:none;stroke:#2d7a4f;stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke 600ms;}
 .t-fill.warn{stroke:#f39c12;}
 .t-fill.danger{stroke:#c0392b;}
 .t-fill.read{stroke:#5b8dd9;}
 .opt:disabled{opacity:.35;cursor:not-allowed;}
-.t-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:.9rem;font-weight:800;color:white;}
+.t-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.1rem;font-weight:800;color:var(--ink);}
+.q-timer-area{display:flex;align-items:center;gap:16px;margin:14px 0 18px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+.timer-actions{display:flex;flex-direction:column;gap:8px;flex:1;}
+.timer-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px;}
+.btn-finish-read{background:#5b8dd9;color:white;border:none;border-radius:8px;padding:9px 16px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background 120ms,transform 80ms;text-align:left;}
+.btn-finish-read:hover{background:#4a7bc4;transform:translateY(-1px);}
+.btn-skip{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(180,79,47,.25);border-radius:8px;padding:9px 16px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background 120ms,transform 80ms;text-align:left;}
+.btn-skip:hover{background:#e8c4b8;transform:translateY(-1px);}
 .prog-wrap{height:4px;background:var(--line);}
 .prog-fill{height:100%;background:linear-gradient(90deg,#b44f2f,#e06030);transition:width 300ms ease;}
 .q-area{max-width:780px;margin:28px auto;padding:0 22px;}
@@ -182,13 +189,6 @@ pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family
     <div class="g-stats">
       <div class="sbox"><div class="slbl">Score</div><div class="sval" id="g-score">0</div></div>
       <div class="cbox" id="g-cbox"><div class="clbl">Combo</div><div class="cval" id="g-combo">×1</div></div>
-      <div class="tw">
-        <svg class="tr" viewBox="0 0 52 52">
-          <circle cx="26" cy="26" r="22" class="t-track"/>
-          <circle cx="26" cy="26" r="22" class="t-fill" id="t-fill"/>
-        </svg>
-        <span class="t-txt" id="t-txt">20</span>
-      </div>
     </div>
   </div>
   <div class="prog-wrap"><div class="prog-fill" id="prog" style="width:0%"></div></div>
@@ -197,6 +197,20 @@ pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family
     <div class="q-card anim" id="q-card">
       <div class="q-text" id="q-text"></div>
       <pre class="q-code" id="q-code" style="display:none;"></pre>
+      <div class="q-timer-area" id="q-timer-area">
+        <div class="tw">
+          <svg class="tr" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="22" class="t-track"/>
+            <circle cx="26" cy="26" r="22" class="t-fill" id="t-fill"/>
+          </svg>
+          <span class="t-txt" id="t-txt">20</span>
+        </div>
+        <div class="timer-actions">
+          <div class="timer-label">Time remaining</div>
+          <button class="btn-finish-read" id="btn-finish-read" onclick="finishedReading()">Finished Reading ✓</button>
+          <button class="btn-skip" id="btn-skip" onclick="skipQuestion()" style="display:none;">Skip to Next Question →</button>
+        </div>
+      </div>
       <div class="opts" id="opts"></div>
       <div class="expl" id="expl"></div>
       <div class="next-row" id="next-row">
@@ -719,6 +733,8 @@ function setOptsDisabled(disabled) {
 }
 
 function startReading() {
+  document.getElementById('btn-finish-read').style.display = '';
+  document.getElementById('btn-skip').style.display = 'none';
   setOptsDisabled(true);
   let readVal = READ_TIME;
   updateReadingUI(readVal);
@@ -743,6 +759,8 @@ function updateReadingUI(v) {
 }
 
 function startTimer() {
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = '';
   timerVal = TIMER_MAX;
   qStart = Date.now();
   updateTimerUI(TIMER_MAX);
@@ -762,6 +780,8 @@ function updateTimerUI(v) {
 }
 
 function timeUp() {
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = 'none';
   const elapsed = TIMER_MAX;
   timings.push(elapsed);
   const q = QS[qIdx];
@@ -769,6 +789,19 @@ function timeUp() {
   combo = 0; updateCombo();
   markOptions(q.a, -1);
   showExpl(q.ex);
+}
+
+function finishedReading() {
+  clearInterval(timerIv);
+  setOptsDisabled(false);
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = '';
+  startTimer();
+}
+
+function skipQuestion() {
+  clearInterval(timerIv);
+  timeUp();
 }
 
 function answer(chosen) {
@@ -796,6 +829,8 @@ function answer(chosen) {
 }
 
 function markOptions(correctIdx, chosenIdx) {
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = 'none';
   document.querySelectorAll('.opt').forEach((btn, i) => {
     btn.disabled = true;
     if (i === correctIdx) btn.classList.add('correct');
