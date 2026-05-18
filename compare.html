@@ -99,6 +99,21 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+.load-bar {
+  height: 3px; background: #eaf0f8; border-radius: 2px;
+  margin-bottom: 8px; overflow: hidden;
+}
+.load-bar-fill {
+  height: 100%; width: 35%;
+  background: linear-gradient(90deg, #b8cde0, #7aaad4, #b8cde0);
+  border-radius: 2px;
+  animation: loadslide 1.3s ease-in-out infinite;
+}
+@keyframes loadslide {
+  0%   { transform: translateX(-200%); }
+  100% { transform: translateX(500%); }
+}
+
 /* ── Lineage ── */
 #lineage {
   margin-top: 22px;
@@ -388,6 +403,7 @@ function buildPanels() {
         <span class="panel-name">${m.name}</span>
       </div>
       <div class="panel-meta">${m.desc} &nbsp;·&nbsp; ctx ${m.seqLen + 1}</div>
+      <div class="load-bar" id="lb${idx}" hidden><div class="load-bar-fill"></div></div>
       <div class="editor-wrap">
         <div class="ghost-layer" id="ghost${idx}" aria-hidden="true"></div>
         <textarea class="editor" id="ta${idx}"
@@ -451,19 +467,22 @@ async function loadModel(idx) {
   if (loadState[idx] !== 'idle') return;
   loadState[idx] = 'loading';
   setDot(idx, 'loading');
-  setStatus(idx, `loading ${MODELS[idx].onnx}…`);
+  setStatus(idx, `loading model… (300 MB, may take a minute)`);
+  document.getElementById(`lb${idx}`).hidden = false;
   try {
     sessions[idx]  = await ort.InferenceSession.create(MODELS[idx].onnx, {
       executionProviders: ['wasm']
     });
     loadState[idx] = 'ready';
     setDot(idx, 'ready');
+    document.getElementById(`lb${idx}`).hidden = true;
     setStatus(idx, 'ready');
     const ta = document.getElementById(`ta${idx}`);
     if (ta.value.trim()) scheduleInference(idx);
   } catch (e) {
     loadState[idx] = 'error';
     setDot(idx, 'error');
+    document.getElementById(`lb${idx}`).hidden = true;
     setStatus(idx, `error: ${e.message}`);
   }
 }
