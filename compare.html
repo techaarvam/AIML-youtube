@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tech Aarvam · Model Comparison</title>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: monospace;
+  background: #f5f7fa;
+  color: #2c2c2c;
+  padding: 24px 20px 40px;
+}
+
+header { margin-bottom: 18px; }
+h1 { color: #4a6fa5; font-size: 1.2em; letter-spacing: 0.02em; }
+.subtitle { color: #9aaabf; font-size: 0.76em; margin-top: 3px; }
+
+#vocab-status {
+  font-size: 0.76em;
+  color: #6a7f99;
+  padding: 7px 12px;
+  background: #eaf0f8;
+  border-left: 3px solid #b8cde0;
+  margin-bottom: 18px;
+  transition: border-color 0.3s;
+}
+
+/* ── Inference grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dde6f0;
+  border-radius: 6px;
+  padding: 14px 14px 10px;
+  box-shadow: 0 1px 4px rgba(100,130,170,0.07);
+}
+
+.panel-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #d4dde8; border: 1px solid #c0ccd8;
+  flex-shrink: 0; transition: background 0.3s;
+}
+.dot.loading { background: #f6c26b; border-color: #f0aa38; }
+.dot.ready   { background: #7ec89a; border-color: #5ab57a; }
+.dot.error   { background: #e88a8a; border-color: #d46060; }
+
+.panel-name { font-size: 0.88em; font-weight: bold; color: #4a6fa5; }
+.panel-meta { font-size: 0.7em; color: #a0b0c4; margin-bottom: 10px; }
+
+:root {
+  --ep: 9px;
+  --ef: 13px;
+  --el: 1.65;
+  --ef-stack: monospace;
+}
+
+.editor-wrap { position: relative; overflow: hidden; }
+
+.ghost-layer {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: var(--ep);
+  font-size: var(--ef); font-family: var(--ef-stack); line-height: var(--el);
+  white-space: pre-wrap; word-break: break-word;
+  pointer-events: none; overflow: hidden;
+  border: 1px solid transparent; z-index: 0;
+}
+.user-mirror { color: transparent; }
+.ghost-pred  { color: #b0bfcf; }
+
+textarea.editor {
+  position: relative; z-index: 1; display: block;
+  width: 100%; min-height: 78px;
+  background: transparent; color: #2c3e50;
+  border: 1px solid #cdd8e8; border-radius: 4px;
+  padding: var(--ep);
+  font-size: var(--ef); font-family: var(--ef-stack); line-height: var(--el);
+  resize: none; overflow: hidden; outline: none;
+  caret-color: #4a6fa5; transition: border-color 0.15s;
+}
+textarea.editor::placeholder { color: #c8d5e4; }
+textarea.editor:focus { border-color: #7aaad4; box-shadow: 0 0 0 2px #e0edf8; }
+textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.panel-status {
+  font-size: 0.68em; color: #b0bfcf;
+  margin-top: 6px; min-height: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Ranking section ── */
+.ranking-section {
+  margin-top: 32px;
+  background: #ffffff;
+  border: 1px solid #dde6f0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(100,130,170,0.07);
+}
+
+.ranking-section h2 {
+  font-size: 0.95em;
+  color: #4a6fa5;
+  margin-bottom: 4px;
+}
+
+.ranking-hint {
+  font-size: 0.72em;
+  color: #9aaabf;
+  margin-bottom: 16px;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f5f8fd;
+  border: 1px solid #dde6f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  cursor: grab;
+  user-select: none;
+  transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.rank-item:active { cursor: grabbing; }
+.rank-item.dragging { opacity: 0.4; }
+.rank-item.drag-over {
+  background: #e8f0fb;
+  border-color: #7aaad4;
+  box-shadow: 0 0 0 2px #d0e4f5;
+}
+
+.rank-pos {
+  font-size: 0.78em;
+  font-weight: bold;
+  color: #9aaabf;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.rank-pos::before { content: '#'; }
+
+.rank-grip {
+  color: #c0ccd8;
+  font-size: 1.1em;
+  letter-spacing: -2px;
+  flex-shrink: 0;
+}
+
+.rank-label { font-size: 0.85em; color: #2c3e50; flex: 1; }
+.rank-desc  { font-size: 0.7em; color: #9aaabf; }
+
+/* submit + result row */
+.ranking-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+#submit-btn {
+  padding: 8px 22px;
+  background: #4a6fa5;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.85em;
+  font-family: monospace;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#submit-btn:hover:not(:disabled) { background: #3a5a8f; }
+#submit-btn:disabled { background: #c0ccd8; cursor: not-allowed; }
+
+#submit-status { font-size: 0.76em; color: #6a7f99; }
+
+/* leaderboard */
+.leaderboard {
+  margin-top: 20px;
+  border-top: 1px solid #eaf0f8;
+  padding-top: 16px;
+}
+
+.leaderboard h3 {
+  font-size: 0.82em;
+  color: #6a7f99;
+  margin-bottom: 10px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f4f9;
+  font-size: 0.82em;
+}
+.lb-row:last-child { border-bottom: none; }
+
+.lb-pos {
+  width: 22px; text-align: center;
+  font-weight: bold; color: #4a6fa5; flex-shrink: 0;
+}
+.lb-name { flex: 1; color: #2c3e50; }
+.lb-bar-wrap {
+  width: 120px; height: 6px;
+  background: #eaf0f8; border-radius: 3px;
+  flex-shrink: 0; overflow: hidden;
+}
+.lb-bar { height: 100%; background: #7aaad4; border-radius: 3px; transition: width 0.4s; }
+.lb-score { width: 80px; text-align: right; color: #6a7f99; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Tech Aarvam · Model Comparison</h1>
+  <div class="subtitle">Sentence completion · type in any panel · grayed text is model prediction</div>
+</header>
+
+<div id="vocab-status">Initialising...</div>
+<div class="grid" id="grid"></div>
+
+<!-- ── Ranking ── -->
+<div class="ranking-section">
+  <h2>Rank the models</h2>
+  <div class="ranking-hint">Try each panel above, then drag to order — best model at the top</div>
+
+  <div class="rank-list" id="rank-list"></div>
+
+  <div class="ranking-controls">
+    <button id="submit-btn" disabled>Submit ranking</button>
+    <span id="submit-status"></span>
+  </div>
+
+  <div class="leaderboard" id="leaderboard" hidden>
+    <h3>Community ranking</h3>
+    <div id="lb-rows"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Configuration ─────────────────────────────────────────────────────────────
+const PREDICT_TOKENS = 5;   // ghost prediction length — adjust here
+
+// Fill in after `firebase deploy --only functions`
+// firebase functions:list will show the URLs
+const FUNCTIONS_BASE = 'https://us-central1-techaarvam.cloudfunctions.net';
+
+const MODELS = [
+  {
+    id:     'local_w64',
+    name:   'Local · w64',
+    desc:   'WikiText-103 · 5 epochs · loss 4.24 · ppl 69',
+    onnx:   'model_local_w64.onnx',
+    seqLen: 63,
+  },
+  {
+    id:     'local_w256',
+    name:   'Local · w256',
+    desc:   'WikiText-103 · context extended 64→256 · loss pending',
+    onnx:   'model_local_w256.onnx',
+    seqLen: 255,
+  },
+  {
+    id:     'server_w256_out1',
+    name:   'Server BTM · w256 · output 1',
+    desc:   'Wiki+OWT · BTM lineage · after slice-2 first pass',
+    onnx:   'model_server_w256_out1.onnx',
+    seqLen: 255,
+  },
+  {
+    id:     'server_w256_out2',
+    name:   'Server BTM · w256 · output 2',
+    desc:   'Wiki+OWT · BTM lineage · after slice-2 second pass',
+    onnx:   'model_server_w256_out2.onnx',
+    seqLen: 255,
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let vocab        = null;
+let reverseVocab = null;
+let vocabSize    = 0;
+let unkIdx       = -1;
+const sessions   = new Array(MODELS.length).fill(null);
+const loadState  = new Array(MODELS.length).fill('idle');
+const debounces  = new Array(MODELS.length).fill(null);
+
+// ── Cookie helpers ────────────────────────────────────────────────────────────
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function setCookie(name, value, days) {
+  const exp = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) +
+    '; expires=' + exp + '; path=/; SameSite=Lax';
+}
+const VOTE_COOKIE = 'ta_ranking_v1';
+const hasVoted    = () => !!getCookie(VOTE_COOKIE);
+
+// ── Tokenizer ─────────────────────────────────────────────────────────────────
+function tokenize(text) {
+  text = text.toLowerCase();
+  text = text.replace(/n't/g,               " n't");
+  text = text.replace(/'s\b/g,              " 's");
+  text = text.replace(/'re\b/g,             " 're");
+  text = text.replace(/'ve\b/g,             " 've");
+  text = text.replace(/'ll\b/g,             " 'll");
+  text = text.replace(/'d\b/g,              " 'd");
+  text = text.replace(/'m\b/g,              " 'm");
+  text = text.replace(/``/g,                ' `` ');
+  text = text.replace(/''/g,                " '' ");
+  text = text.replace(/([.,!?;:()\[\]{}"'])/g, ' $1 ');
+  return text.split(/\s+/).filter(t => t.length > 0);
+}
+
+// ── Build inference panels ─────────────────────────────────────────────────────
+function buildPanels() {
+  const grid = document.getElementById('grid');
+  MODELS.forEach((m, idx) => {
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.innerHTML = `
+      <div class="panel-header">
+        <div class="dot" id="dot${idx}"></div>
+        <span class="panel-name">${m.name}</span>
+      </div>
+      <div class="panel-meta">${m.desc} &nbsp;·&nbsp; ctx ${m.seqLen + 1}</div>
+      <div class="editor-wrap">
+        <div class="ghost-layer" id="ghost${idx}" aria-hidden="true"></div>
+        <textarea class="editor" id="ta${idx}"
+          placeholder="Start typing…"
+          spellcheck="false"
+          disabled></textarea>
+      </div>
+      <div class="panel-status" id="st${idx}">waiting for vocab…</div>
+    `;
+    grid.appendChild(panel);
+
+    const ta    = document.getElementById(`ta${idx}`);
+    const ghost = document.getElementById(`ghost${idx}`);
+
+    ta.addEventListener('focus', () => {
+      if (loadState[idx] === 'idle') loadModel(idx);
+    });
+    ta.addEventListener('input', () => {
+      autoExpand(ta, ghost);
+      clearGhost(idx, ta.value);
+      scheduleInference(idx);
+    });
+  });
+}
+
+function autoExpand(ta, ghost) {
+  ta.style.height    = 'auto';
+  ta.style.height    = ta.scrollHeight + 'px';
+  ghost.style.height = ta.scrollHeight + 'px';
+}
+function clearGhost(idx, text) { setGhost(idx, text, ''); }
+
+// ── Vocabulary ────────────────────────────────────────────────────────────────
+async function loadVocab() {
+  const statusEl = document.getElementById('vocab-status');
+  try {
+    ort.env.wasm.numThreads = 1;
+    const resp = await fetch('vocab.json');
+    if (!resp.ok) throw new Error('vocab.json not found — serve from the transformer directory');
+    vocab        = await resp.json();
+    vocabSize    = Object.keys(vocab).length;
+    reverseVocab = Object.fromEntries(Object.entries(vocab).map(([w, i]) => [i, w]));
+    unkIdx       = vocab['<unk>'] !== undefined ? vocab['<unk>'] : -1;
+
+    statusEl.textContent       = `Vocab ready — ${vocabSize.toLocaleString()} words · click a panel to load its model`;
+    statusEl.style.borderColor = '#7ec89a';
+
+    MODELS.forEach((_, idx) => {
+      document.getElementById(`ta${idx}`).disabled = false;
+      setStatus(idx, 'click to load model');
+    });
+  } catch (e) {
+    statusEl.style.borderColor = '#e88a8a';
+    statusEl.textContent = `Error: ${e.message}`;
+  }
+}
+
+// ── Lazy model loading ────────────────────────────────────────────────────────
+async function loadModel(idx) {
+  if (loadState[idx] !== 'idle') return;
+  loadState[idx] = 'loading';
+  setDot(idx, 'loading');
+  setStatus(idx, `loading ${MODELS[idx].onnx}…`);
+  try {
+    sessions[idx]  = await ort.InferenceSession.create(MODELS[idx].onnx, {
+      executionProviders: ['wasm']
+    });
+    loadState[idx] = 'ready';
+    setDot(idx, 'ready');
+    setStatus(idx, 'ready');
+    const ta = document.getElementById(`ta${idx}`);
+    if (ta.value.trim()) scheduleInference(idx);
+  } catch (e) {
+    loadState[idx] = 'error';
+    setDot(idx, 'error');
+    setStatus(idx, `error: ${e.message}`);
+  }
+}
+
+// ── Inference ─────────────────────────────────────────────────────────────────
+function scheduleInference(idx) {
+  clearTimeout(debounces[idx]);
+  debounces[idx] = setTimeout(() => runInference(idx), 280);
+}
+
+async function runInference(idx) {
+  if (loadState[idx] !== 'ready' || !vocab) return;
+  const ta   = document.getElementById(`ta${idx}`);
+  const text = ta.value;
+  if (!text.trim()) { setGhost(idx, text, ''); return; }
+
+  const seqLen = MODELS[idx].seqLen;
+  const tokens = tokenize(text);
+  const slice  = tokens.slice(-seqLen);
+  const ids    = new Array(seqLen).fill(0);
+  const offset = seqLen - slice.length;
+  for (let i = 0; i < slice.length; i++)
+    ids[offset + i] = vocab[slice[i]] !== undefined ? vocab[slice[i]] : 0;
+
+  const window = [...ids];
+  const words  = [];
+  setStatus(idx, 'predicting…');
+
+  for (let step = 0; step < PREDICT_TOKENS; step++) {
+    const tensor = new ort.Tensor(
+      'int64', BigInt64Array.from(window.map(BigInt)), [1, seqLen]
+    );
+    let results;
+    try { results = await sessions[idx].run({ input: tensor }); }
+    catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
+
+    const logits = results.logits.data;
+    const base   = (seqLen - 1) * vocabSize;
+    let bestIdx = 0, bestVal = -Infinity;
+    for (let i = 0; i < vocabSize; i++) {
+      if (i === unkIdx) continue;
+      if (logits[base + i] > bestVal) { bestVal = logits[base + i]; bestIdx = i; }
+    }
+    words.push(reverseVocab[bestIdx] || '');
+    window.push(bestIdx);
+    window.shift();
+  }
+
+  setGhost(idx, text, ' ' + words.join(' '));
+  setStatus(idx, `${PREDICT_TOKENS} tokens predicted`);
+}
+
+// ── Ghost text ────────────────────────────────────────────────────────────────
+function setGhost(idx, userText, predText) {
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  document.getElementById(`ghost${idx}`).innerHTML =
+    `<span class="user-mirror">${esc(userText)}</span>` +
+    `<span class="ghost-pred">${esc(predText)}</span>`;
+}
+function setDot(idx, cls) {
+  document.getElementById(`dot${idx}`).className = `dot ${cls}`;
+}
+function setStatus(idx, msg) {
+  document.getElementById(`st${idx}`).textContent = msg;
+}
+
+// ── Drag-to-rank ──────────────────────────────────────────────────────────────
+let dragSrc = null;
+
+function buildRankList() {
+  const list = document.getElementById('rank-list');
+  MODELS.forEach((m) => {
+    const item = document.createElement('div');
+    item.className   = 'rank-item';
+    item.draggable   = true;
+    item.dataset.id  = m.id;
+    item.innerHTML   = `
+      <span class="rank-pos"></span>
+      <span class="rank-grip">⠿</span>
+      <span class="rank-label">${m.name}<br><span class="rank-desc">${m.desc}</span></span>
+    `;
+    item.addEventListener('dragstart', onDragStart);
+    item.addEventListener('dragover',  onDragOver);
+    item.addEventListener('dragleave', onDragLeave);
+    item.addEventListener('drop',      onDrop);
+    item.addEventListener('dragend',   onDragEnd);
+    list.appendChild(item);
+  });
+  updatePositions();
+
+  if (hasVoted()) lockRanking('You have already submitted a ranking from this browser.');
+}
+
+function updatePositions() {
+  document.querySelectorAll('.rank-item').forEach((el, i) => {
+    el.querySelector('.rank-pos').textContent = i + 1;
+  });
+  if (!hasVoted()) document.getElementById('submit-btn').disabled = false;
+}
+
+function onDragStart(e) {
+  dragSrc = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  if (this !== dragSrc) this.classList.add('drag-over');
+}
+function onDragLeave() { this.classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  if (this === dragSrc) return;
+  const list = document.getElementById('rank-list');
+  const items = [...list.querySelectorAll('.rank-item')];
+  const srcIdx  = items.indexOf(dragSrc);
+  const destIdx = items.indexOf(this);
+  if (srcIdx < destIdx) list.insertBefore(dragSrc, this.nextSibling);
+  else                  list.insertBefore(dragSrc, this);
+  updatePositions();
+}
+function onDragEnd() {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.rank-item').forEach(el => el.classList.remove('drag-over'));
+}
+
+function lockRanking(msg) {
+  document.querySelectorAll('.rank-item').forEach(el => {
+    el.draggable = false;
+    el.style.cursor = 'default';
+  });
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  document.getElementById('submit-status').textContent = msg;
+}
+
+// ── Submit ranking ────────────────────────────────────────────────────────────
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const items   = [...document.querySelectorAll('.rank-item')];
+  const ranking = items.map(el => el.dataset.id);
+  const btn     = document.getElementById('submit-btn');
+  const status  = document.getElementById('submit-status');
+
+  btn.disabled = true;
+  status.textContent = 'Submitting…';
+
+  try {
+    const resp = await fetch(`${FUNCTIONS_BASE}/submitRanking`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ ranking }),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Server error');
+
+    setCookie(VOTE_COOKIE, '1', 365);
+    lockRanking('Ranking submitted — thank you!');
+    renderLeaderboard(data.rankings);
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    btn.disabled = false;
+  }
+});
+
+// ── Fetch & render leaderboard ────────────────────────────────────────────────
+async function fetchAndRenderRankings() {
+  try {
+    const resp = await fetch(`${FUNCTIONS_BASE}/getRankings`);
+    const data = await resp.json();
+    if (data.ok && Object.keys(data.rankings).length > 0) renderLeaderboard(data.rankings);
+  } catch (e) { /* silently skip if function unreachable */ }
+}
+
+function renderLeaderboard(rankings) {
+  const lb = document.getElementById('leaderboard');
+  const rows = document.getElementById('lb-rows');
+  lb.hidden = false;
+
+  // Sort by bordaTotal descending
+  const sorted = MODELS
+    .map(m => ({
+      name:  m.name,
+      id:    m.id,
+      total: (rankings[m.id] || {}).bordaTotal || 0,
+      votes: (rankings[m.id] || {}).voteCount  || 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  const maxTotal = sorted[0].total || 1;
+
+  rows.innerHTML = sorted.map((m, i) => {
+    const avg = m.votes ? (m.total / m.votes).toFixed(2) : '—';
+    const pct = (m.total / maxTotal * 100).toFixed(1);
+    return `
+      <div class="lb-row">
+        <span class="lb-pos">${i + 1}</span>
+        <span class="lb-name">${m.name}</span>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>
+        <span class="lb-score">avg ${avg} &nbsp;·&nbsp; ${m.votes}v</span>
+      </div>`;
+  }).join('');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+buildPanels();
+buildRankList();
+loadVocab();
+fetchAndRenderRankings();
+</script>
+</body>
+</html>

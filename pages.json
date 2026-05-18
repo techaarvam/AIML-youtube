@@ -23,6 +23,10 @@
     {
       "title": "Eigenvalues Real Vs Complex Dashboard",
       "path": "eigenvalues_real_vs_complex_dashboard.html"
+    },
+    {
+      "title": "Model Comparison — Sentence Completion",
+      "path": "compare.html"
     }
   ]
 }
