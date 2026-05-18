@@ -324,7 +324,7 @@ const PREDICT_TOKENS = 5;   // ghost prediction length — adjust here
 // firebase functions:list will show the URLs
 const FUNCTIONS_BASE = 'https://us-central1-techaarvam.cloudfunctions.net';
 
-const RELEASE = 'https://huggingface.co/techaarvam/aiml-youtube-models/resolve/main';
+const RELEASE = 'https://huggingface.co/vasantharam/aiml-youtube-models/resolve/main';
 
 const MODELS = [
   {
@@ -332,6 +332,7 @@ const MODELS = [
     name:   'Local · w64',
     desc:   'WikiText-103 · 5 epochs · loss 4.24 · ppl 69',
     onnx:   `${RELEASE}/model_local_w64.onnx`,
+    vocab:  `${RELEASE}/vocab_local.json`,
     seqLen: 63,
     svgs:   ['wiki_local_w64.svg'],
   },
@@ -340,6 +341,7 @@ const MODELS = [
     name:   'Local · w128',
     desc:   'WikiText-103 · context extended 64→128 · loss 3.85 · ppl 47',
     onnx:   `${RELEASE}/model_local_w128.onnx`,
+    vocab:  `${RELEASE}/vocab_local.json`,
     seqLen: 127,
     svgs:   ['wiki_local_w64.svg', 'wiki_local_w128.svg'],
   },
@@ -348,19 +350,17 @@ const MODELS = [
     name:   'Server BTM · w256 · output 2',
     desc:   'Wiki+OWT · BTM lineage · after slice-2 second pass',
     onnx:   `${RELEASE}/model_server_w256_out2.onnx`,
+    vocab:  `${RELEASE}/vocab_server.json`,
     seqLen: 255,
     svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
   },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let vocab        = null;
-let reverseVocab = null;
-let vocabSize    = 0;
-let unkIdx       = -1;
-const sessions   = new Array(MODELS.length).fill(null);
-const loadState  = new Array(MODELS.length).fill('idle');
-const debounces  = new Array(MODELS.length).fill(null);
+const sessions    = new Array(MODELS.length).fill(null);
+const loadState   = new Array(MODELS.length).fill('idle');
+const debounces   = new Array(MODELS.length).fill(null);
+const modelVocabs = new Array(MODELS.length).fill(null); // {reverseVocab, vocabSize, unkIdx}
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
 function getCookie(name) {
@@ -375,20 +375,16 @@ function setCookie(name, value, days) {
 const VOTE_COOKIE = 'ta_ranking_v1';
 const hasVoted    = () => !!getCookie(VOTE_COOKIE);
 
-// ── Tokenizer ─────────────────────────────────────────────────────────────────
-function tokenize(text) {
-  text = text.toLowerCase();
-  text = text.replace(/n't/g,               " n't");
-  text = text.replace(/'s\b/g,              " 's");
-  text = text.replace(/'re\b/g,             " 're");
-  text = text.replace(/'ve\b/g,             " 've");
-  text = text.replace(/'ll\b/g,             " 'll");
-  text = text.replace(/'d\b/g,              " 'd");
-  text = text.replace(/'m\b/g,              " 'm");
-  text = text.replace(/``/g,                ' `` ');
-  text = text.replace(/''/g,                " '' ");
-  text = text.replace(/([.,!?;:()\[\]{}"'])/g, ' $1 ');
-  return text.split(/\s+/).filter(t => t.length > 0);
+// ── Tokenizer (server-side via Firebase function) ─────────────────────────────
+async function tokenizeRemote(text, seqLen, modelId) {
+  const resp = await fetch(`${FUNCTIONS_BASE}/tokenize`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ text, seqLen, modelId }),
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error('tokenize failed');
+  return data.ids;  // already padded int[] of length seqLen
 }
 
 // ── Build inference panels ─────────────────────────────────────────────────────
@@ -411,7 +407,7 @@ function buildPanels() {
           spellcheck="false"
           disabled></textarea>
       </div>
-      <div class="panel-status" id="st${idx}">waiting for vocab…</div>
+      <div class="panel-status" id="st${idx}">click to load model</div>
     `;
     grid.appendChild(panel);
 
@@ -437,29 +433,15 @@ function autoExpand(ta, ghost) {
 }
 function clearGhost(idx, text) { setGhost(idx, text, ''); }
 
-// ── Vocabulary ────────────────────────────────────────────────────────────────
-async function loadVocab() {
+// ── Init ──────────────────────────────────────────────────────────────────────
+function initPage() {
+  ort.env.wasm.numThreads = 1;
   const statusEl = document.getElementById('vocab-status');
-  try {
-    ort.env.wasm.numThreads = 1;
-    const resp = await fetch('vocab.json');
-    if (!resp.ok) throw new Error('vocab.json not found — serve from the transformer directory');
-    vocab        = await resp.json();
-    vocabSize    = Object.keys(vocab).length;
-    reverseVocab = Object.fromEntries(Object.entries(vocab).map(([w, i]) => [i, w]));
-    unkIdx       = vocab['<unk>'] !== undefined ? vocab['<unk>'] : -1;
-
-    statusEl.textContent       = `Vocab ready — ${vocabSize.toLocaleString()} words · click a panel to load its model`;
-    statusEl.style.borderColor = '#7ec89a';
-
-    MODELS.forEach((_, idx) => {
-      document.getElementById(`ta${idx}`).disabled = false;
-      setStatus(idx, 'click to load model');
-    });
-  } catch (e) {
-    statusEl.style.borderColor = '#e88a8a';
-    statusEl.textContent = `Error: ${e.message}`;
-  }
+  statusEl.textContent       = 'Click a panel to load its model';
+  statusEl.style.borderColor = '#7ec89a';
+  MODELS.forEach((_, idx) => {
+    document.getElementById(`ta${idx}`).disabled = false;
+  });
 }
 
 // ── Lazy model loading ────────────────────────────────────────────────────────
@@ -470,9 +452,17 @@ async function loadModel(idx) {
   setStatus(idx, `loading model… (300 MB, may take a minute)`);
   document.getElementById(`lb${idx}`).hidden = false;
   try {
-    sessions[idx]  = await ort.InferenceSession.create(MODELS[idx].onnx, {
-      executionProviders: ['wasm']
-    });
+    const [session, vocabData] = await Promise.all([
+      ort.InferenceSession.create(MODELS[idx].onnx, { executionProviders: ['wasm'] }),
+      fetch(MODELS[idx].vocab).then(r => r.json()),
+    ]);
+    sessions[idx] = session;
+    const unkI = vocabData['<unk>'] ?? -1;
+    modelVocabs[idx] = {
+      reverseVocab: Object.fromEntries(Object.entries(vocabData).map(([w, i]) => [i, w])),
+      vocabSize:    Object.keys(vocabData).length,
+      unkIdx:       unkI,
+    };
     loadState[idx] = 'ready';
     setDot(idx, 'ready');
     document.getElementById(`lb${idx}`).hidden = true;
@@ -494,18 +484,17 @@ function scheduleInference(idx) {
 }
 
 async function runInference(idx) {
-  if (loadState[idx] !== 'ready' || !vocab) return;
+  if (loadState[idx] !== 'ready') return;
   const ta   = document.getElementById(`ta${idx}`);
   const text = ta.value;
   if (!text.trim()) { setGhost(idx, text, ''); return; }
 
-  const seqLen = MODELS[idx].seqLen;
-  const tokens = tokenize(text);
-  const slice  = tokens.slice(-seqLen);
-  const ids    = new Array(seqLen).fill(0);
-  const offset = seqLen - slice.length;
-  for (let i = 0; i < slice.length; i++)
-    ids[offset + i] = vocab[slice[i]] !== undefined ? vocab[slice[i]] : 0;
+  const seqLen  = MODELS[idx].seqLen;
+  const modelId = MODELS[idx].id;
+  let ids;
+  try {
+    ids = await tokenizeRemote(text, seqLen, modelId);
+  } catch(e) { setStatus(idx, `tokenize error: ${e.message}`); return; }
 
   const window = [...ids];
   const words  = [];
@@ -520,6 +509,7 @@ async function runInference(idx) {
     catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
 
     const logits = results.logits.data;
+    const { reverseVocab, vocabSize, unkIdx } = modelVocabs[idx];
     const base   = (seqLen - 1) * vocabSize;
     const TEMP = 0.7, TOP_K = 5;
     const scored = [];
@@ -712,7 +702,7 @@ function renderLeaderboard(rankings) {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 buildPanels();
 buildRankList();
-loadVocab();
+initPage();
 fetchAndRenderRankings();
 </script>
 </body>
