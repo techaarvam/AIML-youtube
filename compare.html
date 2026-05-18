@@ -387,7 +387,7 @@ function setCookie(name, value, days) {
   document.cookie = name + '=' + encodeURIComponent(value) +
     '; expires=' + exp + '; path=/; SameSite=Lax';
 }
-const VOTE_COOKIE = 'ta_ranking_v1';
+const VOTE_COOKIE = 'ta_ranking_v2';
 const hasVoted    = () => !!getCookie(VOTE_COOKIE);
 
 // ── Tokenizer (server-side via Firebase function) ─────────────────────────────
