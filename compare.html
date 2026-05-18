@@ -319,12 +319,12 @@ const MODELS = [
     svgs:   ['wiki_local_w64.svg'],
   },
   {
-    id:     'local_w256',
-    name:   'Local · w256',
-    desc:   'WikiText-103 · context extended 64→256 · loss pending',
-    onnx:   'model_local_w256.onnx',
-    seqLen: 255,
-    svgs:   ['wiki_local_w64.svg', 'wiki_local_w256.svg'],
+    id:     'local_w128',
+    name:   'Local · w128',
+    desc:   'WikiText-103 · context extended 64→128 · loss 3.85 · ppl 47',
+    onnx:   'model_local_w128.onnx',
+    seqLen: 127,
+    svgs:   ['wiki_local_w64.svg', 'wiki_local_w128.svg'],
   },
   {
     id:     'server_w256_out1',
@@ -508,11 +508,19 @@ async function runInference(idx) {
 
     const logits = results.logits.data;
     const base   = (seqLen - 1) * vocabSize;
-    let bestIdx = 0, bestVal = -Infinity;
+    const TEMP = 0.7, TOP_K = 5;
+    const scored = [];
     for (let i = 0; i < vocabSize; i++) {
       if (i === unkIdx) continue;
-      if (logits[base + i] > bestVal) { bestVal = logits[base + i]; bestIdx = i; }
+      scored.push([i, logits[base + i]]);
     }
+    scored.sort((a, b) => b[1] - a[1]);
+    const topK = scored.slice(0, TOP_K);
+    const maxL = topK[0][1];
+    const expS = topK.map(([i, l]) => [i, Math.exp((l - maxL) / TEMP)]);
+    const sumE = expS.reduce((s, [, e]) => s + e, 0);
+    let r = Math.random() * sumE, bestIdx = expS[expS.length - 1][0];
+    for (const [i, e] of expS) { r -= e; if (r <= 0) { bestIdx = i; break; } }
     words.push(reverseVocab[bestIdx] || '');
     window.push(bestIdx);
     window.shift();
