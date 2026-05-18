@@ -342,13 +342,13 @@ const MODELS = [
     svgs:   ['wiki_local_w64.svg'],
   },
   {
-    id:     'local_w128',
-    name:   'Local · w128',
-    desc:   'WikiText-103 · context extended 64→128 · loss 3.85 · ppl 47',
+    id:     'server_w128',
+    name:   'Server · w128',
+    desc:   'WikiText + Wiki+OWT · epochs 8–10 · ctx 128',
     onnx:   `${RELEASE}/model_local_w128.onnx`,
     vocab:  `${RELEASE}/vocab_local.json`,
     seqLen: 127,
-    svgs:   ['wiki_local_w64.svg', 'wiki_local_w128.svg'],
+    svgs:   ['wiki_local_w64.svg', 'wiki_local_w128.svg', 'wiki_server_w128.svg'],
   },
   {
     id:     'server_w256_out2',
