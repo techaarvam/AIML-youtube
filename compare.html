@@ -309,12 +309,14 @@ const PREDICT_TOKENS = 5;   // ghost prediction length — adjust here
 // firebase functions:list will show the URLs
 const FUNCTIONS_BASE = 'https://us-central1-techaarvam.cloudfunctions.net';
 
+const RELEASE = 'https://github.com/techaarvam/AIML-youtube/releases/download/v1.0-models';
+
 const MODELS = [
   {
     id:     'local_w64',
     name:   'Local · w64',
     desc:   'WikiText-103 · 5 epochs · loss 4.24 · ppl 69',
-    onnx:   'model_local_w64.onnx',
+    onnx:   `${RELEASE}/model_local_w64.onnx`,
     seqLen: 63,
     svgs:   ['wiki_local_w64.svg'],
   },
@@ -322,7 +324,7 @@ const MODELS = [
     id:     'local_w128',
     name:   'Local · w128',
     desc:   'WikiText-103 · context extended 64→128 · loss 3.85 · ppl 47',
-    onnx:   'model_local_w128.onnx',
+    onnx:   `${RELEASE}/model_local_w128.onnx`,
     seqLen: 127,
     svgs:   ['wiki_local_w64.svg', 'wiki_local_w128.svg'],
   },
@@ -330,7 +332,7 @@ const MODELS = [
     id:     'server_w256_out2',
     name:   'Server BTM · w256 · output 2',
     desc:   'Wiki+OWT · BTM lineage · after slice-2 second pass',
-    onnx:   'model_server_w256_out2.onnx',
+    onnx:   `${RELEASE}/model_server_w256_out2.onnx`,
     seqLen: 255,
     svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
   },
