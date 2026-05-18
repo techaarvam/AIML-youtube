@@ -362,10 +362,11 @@ const MODELS = [
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const sessions    = new Array(MODELS.length).fill(null);
-const loadState   = new Array(MODELS.length).fill('idle');
-const debounces   = new Array(MODELS.length).fill(null);
-const modelVocabs = new Array(MODELS.length).fill(null); // {reverseVocab, vocabSize, unkIdx}
+const sessions          = new Array(MODELS.length).fill(null);
+const loadState         = new Array(MODELS.length).fill('idle');
+const debounces         = new Array(MODELS.length).fill(null);
+const modelVocabs       = new Array(MODELS.length).fill(null); // {reverseVocab, vocabSize, unkIdx}
+const pendingPrediction = new Array(MODELS.length).fill('');
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
 function getCookie(name) {
@@ -426,6 +427,16 @@ function buildPanels() {
     ta.addEventListener('focus', () => {
       if (loadState[idx] === 'idle') loadModel(idx);
       showLineage(idx);
+    });
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab' && pendingPrediction[idx]) {
+        e.preventDefault();
+        ta.value += pendingPrediction[idx];
+        pendingPrediction[idx] = '';
+        clearGhost(idx, ta.value);
+        autoExpand(ta, ghost);
+        scheduleInference(idx);
+      }
     });
     ta.addEventListener('input', () => {
       autoExpand(ta, ghost);
@@ -544,6 +555,7 @@ async function runInference(idx) {
 
 // ── Ghost text ────────────────────────────────────────────────────────────────
 function setGhost(idx, userText, predText) {
+  pendingPrediction[idx] = predText;
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById(`ghost${idx}`).innerHTML =
     `<span class="user-mirror">${esc(userText)}</span>` +
