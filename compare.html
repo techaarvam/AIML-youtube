@@ -19,6 +19,26 @@ header { margin-bottom: 18px; }
 h1 { color: #4a6fa5; font-size: 1.2em; letter-spacing: 0.02em; }
 .subtitle { color: #9aaabf; font-size: 0.76em; margin-top: 3px; }
 
+.prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.prompt-chip {
+  font-family: monospace;
+  font-size: 0.72em;
+  color: #4a6fa5;
+  background: #eaf0f8;
+  border: 1px solid #c8d8ec;
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.prompt-chip:hover { background: #d8e8f8; border-color: #7aaad4; }
+
 #vocab-status {
   font-size: 0.76em;
   color: #6a7f99;
@@ -290,6 +310,7 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
 </header>
 
 <div id="vocab-status">Initialising...</div>
+<div class="prompts" id="prompts"></div>
 <div class="grid" id="grid"></div>
 
 <!-- ── Lineage ── -->
@@ -324,6 +345,14 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 const PREDICT_TOKENS = 5;   // ghost prediction length — adjust here
+
+const PROMPTS = [
+  'the stock market fell sharply after',
+  'scientists at the university discovered',
+  'the old man walked slowly through the',
+  'in 1945 the war ended and',
+  'she opened the letter and read',
+];
 
 // Fill in after `firebase deploy --only functions`
 // firebase functions:list will show the URLs
@@ -729,8 +758,31 @@ function renderLeaderboard(rankings) {
   }).join('');
 }
 
+// ── Prompt chips ─────────────────────────────────────────────────────────────
+function buildPrompts() {
+  const container = document.getElementById('prompts');
+  PROMPTS.forEach(text => {
+    const chip = document.createElement('button');
+    chip.className   = 'prompt-chip';
+    chip.textContent = text;
+    chip.addEventListener('click', () => {
+      MODELS.forEach((_, idx) => {
+        const ta    = document.getElementById(`ta${idx}`);
+        const ghost = document.getElementById(`ghost${idx}`);
+        if (loadState[idx] === 'idle') loadModel(idx);
+        ta.value = text;
+        autoExpand(ta, ghost);
+        clearGhost(idx, text);
+        scheduleInference(idx);
+      });
+    });
+    container.appendChild(chip);
+  });
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 buildPanels();
+buildPrompts();
 buildRankList();
 initPage();
 fetchAndRenderRankings();
