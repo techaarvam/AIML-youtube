@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="288" font-family="system-ui,sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="480" height="288" fill="#f8fafc"/>
+
+  <text x="240" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">Context Extension · w64 → w128 → w256</text>
+  <text x="240" y="43" text-anchor="middle" font-size="11" fill="#64748b">positional interpolation + short adapt runs</text>
+
+  <!-- w64 base -->
+  <rect x="50" y="54" width="380" height="34" rx="5" fill="#1e40af" stroke="#1e3a8a" stroke-width="1.5"/>
+  <text x="240" y="76" text-anchor="middle" font-size="12" font-weight="600" fill="white">model_local_w64  ·  loss 4.238</text>
+
+  <line x1="240" y1="88" x2="240" y2="106" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- w128 adapt -->
+  <rect x="50" y="106" width="380" height="54" rx="6" fill="#f3e8ff" stroke="#c084fc" stroke-width="1.5"/>
+  <text x="240" y="128" text-anchor="middle" font-size="12" font-weight="600" fill="#4a044e">posEmb interpolate 64→128  +  adapt run</text>
+  <text x="240" y="148" text-anchor="middle" fill="#374151">adapt_wiki.txt · 1/20th WikiText · RTX 5070</text>
+
+  <line x1="240" y1="160" x2="240" y2="178" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- w256 adapt -->
+  <rect x="50" y="178" width="380" height="54" rx="6" fill="#f3e8ff" stroke="#c084fc" stroke-width="1.5"/>
+  <text x="240" y="200" text-anchor="middle" font-size="12" font-weight="600" fill="#4a044e">posEmb interpolate 128→256  +  adapt run</text>
+  <text x="240" y="220" text-anchor="middle" fill="#374151">adapt_wiki2.txt · 1/20th WikiText · cloud GPU</text>
+
+  <line x1="240" y1="232" x2="240" y2="250" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- output -->
+  <rect x="130" y="250" width="220" height="26" rx="5" fill="#1d4ed8"/>
+  <text x="240" y="267" text-anchor="middle" font-size="12" font-weight="bold" fill="white">model_local_w256</text>
+</svg>

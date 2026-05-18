@@ -99,6 +99,36 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* ── Lineage ── */
+#lineage {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #dde6f0;
+}
+#lineage-label {
+  font-size: 0.72em;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9aaabf;
+  margin-bottom: 10px;
+}
+#lineage-svgs {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+#lineage-svgs img {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #dde6f0;
+  border-radius: 6px;
+  background: #fff;
+}
+
 /* ── Ranking section ── */
 .ranking-section {
   margin-top: 32px;
@@ -242,6 +272,15 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
 <div id="vocab-status">Initialising...</div>
 <div class="grid" id="grid"></div>
 
+<!-- ── Lineage ── -->
+<div id="lineage" hidden>
+  <div id="lineage-label">Training lineage</div>
+  <div id="lineage-svgs">
+    <img id="svg-a" alt="lineage diagram">
+    <img id="svg-b" alt="lineage continuation" hidden>
+  </div>
+</div>
+
 <!-- ── Ranking ── -->
 <div class="ranking-section">
   <h2>Rank the models</h2>
@@ -277,6 +316,7 @@ const MODELS = [
     desc:   'WikiText-103 · 5 epochs · loss 4.24 · ppl 69',
     onnx:   'model_local_w64.onnx',
     seqLen: 63,
+    svgs:   ['wiki_local_w64.svg'],
   },
   {
     id:     'local_w256',
@@ -284,6 +324,7 @@ const MODELS = [
     desc:   'WikiText-103 · context extended 64→256 · loss pending',
     onnx:   'model_local_w256.onnx',
     seqLen: 255,
+    svgs:   ['wiki_local_w64.svg', 'wiki_local_w256.svg'],
   },
   {
     id:     'server_w256_out1',
@@ -291,6 +332,7 @@ const MODELS = [
     desc:   'Wiki+OWT · BTM lineage · after slice-2 first pass',
     onnx:   'model_server_w256_out1.onnx',
     seqLen: 255,
+    svgs:   ['btm_lineage_out1.svg'],
   },
   {
     id:     'server_w256_out2',
@@ -298,6 +340,7 @@ const MODELS = [
     desc:   'Wiki+OWT · BTM lineage · after slice-2 second pass',
     onnx:   'model_server_w256_out2.onnx',
     seqLen: 255,
+    svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
   },
 ];
 
@@ -367,6 +410,7 @@ function buildPanels() {
 
     ta.addEventListener('focus', () => {
       if (loadState[idx] === 'idle') loadModel(idx);
+      showLineage(idx);
     });
     ta.addEventListener('input', () => {
       autoExpand(ta, ghost);
@@ -490,6 +534,19 @@ function setDot(idx, cls) {
 }
 function setStatus(idx, msg) {
   document.getElementById(`st${idx}`).textContent = msg;
+}
+
+// ── Lineage display ───────────────────────────────────────────────────────────
+function showLineage(idx) {
+  const svgs = MODELS[idx].svgs;
+  const section = document.getElementById('lineage');
+  const imgA    = document.getElementById('svg-a');
+  const imgB    = document.getElementById('svg-b');
+  imgA.src      = svgs[0];
+  imgA.hidden   = false;
+  imgB.src      = svgs[1] || '';
+  imgB.hidden   = !svgs[1];
+  section.hidden = false;
 }
 
 // ── Drag-to-rank ──────────────────────────────────────────────────────────────

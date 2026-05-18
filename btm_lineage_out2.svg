@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="148" font-family="system-ui,sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="700" height="148" fill="#f8fafc"/>
+
+  <!-- from output 1 -->
+  <rect x="195" y="8" width="370" height="28" rx="5" fill="#0284c7"/>
+  <text x="380" y="27" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Server BTM · w256 · output 1  ·  loss ~4.75</text>
+
+  <line x1="380" y1="36" x2="380" y2="54" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- stable pass -->
+  <rect x="60" y="54" width="500" height="58" rx="6" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
+  <text x="310" y="77" text-anchor="middle" font-size="13" font-weight="600" fill="#0c4a6e">Stable pass · unmodified slices · loss descent</text>
+  <text x="310" y="97" text-anchor="middle" fill="#374151">loss 4.75 → 4.77  ·  2nd complete pass through slice 2</text>
+  <rect x="568" y="62" width="72" height="24" rx="4" fill="#0284c7"/>
+  <text x="604" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="white">output 2</text>
+</svg>
