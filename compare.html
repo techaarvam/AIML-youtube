@@ -342,13 +342,13 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
 <!-- ── Ranking ── -->
 <div class="ranking-section">
   <h2>Rank the models</h2>
-  <div class="ranking-hint">Try each panel above, then drag to order — best model at the top</div>
+  <div class="ranking-hint">Ranking disabled — server models have vocab integrity issues (see notes). Drag to order for your own reference only.</div>
 
   <div class="rank-list" id="rank-list"></div>
 
   <div class="ranking-controls">
     <button id="submit-btn" disabled>Submit ranking</button>
-    <span id="submit-status"></span>
+    <span id="submit-status">ranking paused — model set under review</span>
   </div>
 
   <div class="leaderboard" id="leaderboard" hidden>
@@ -667,7 +667,7 @@ function updatePositions() {
   document.querySelectorAll('.rank-item').forEach((el, i) => {
     el.querySelector('.rank-pos').textContent = i + 1;
   });
-  if (!hasVoted()) document.getElementById('submit-btn').disabled = false;
+  // submit disabled — model set has vocab integrity issues
 }
 
 function onDragStart(e) {
