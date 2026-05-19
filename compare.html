@@ -929,6 +929,7 @@ buildPrompts();
 buildRankList();
 initPage();
 fetchAndRenderRankings();
+MODELS.forEach((_, idx) => loadModel(idx));
 </script>
 </body>
 </html>
