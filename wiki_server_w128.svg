@@ -25,5 +25,5 @@
 
   <!-- output -->
   <rect x="100" y="178" width="280" height="26" rx="5" fill="#1d4ed8"/>
-  <text x="240" y="195" text-anchor="middle" font-size="12" font-weight="bold" fill="white">model_server_w128  ·  in progress</text>
+  <text x="240" y="195" text-anchor="middle" font-size="12" font-weight="bold" fill="white">model_server_w128  ·  loss 4.211</text>
 </svg>
