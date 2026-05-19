@@ -399,7 +399,7 @@ const MODELS = [
   {
     id:     'server_w128',
     name:   'Server · w128',
-    desc:   'WikiText + Wiki+OWT · epochs 8–10 · ctx 128 · loss 4.21 · ppl 67',
+    desc:   'WikiText + Wiki+OWT · ctx 128 · loss 4.21 · vocab mismatch (see notes)',
     onnx:   `${RELEASE}/model_server_w128.onnx`,
     vocab:  `${RELEASE}/vocab_server.json`,
     seqLen: 127,
@@ -408,7 +408,7 @@ const MODELS = [
   {
     id:     'server_w256_out2',
     name:   'Server BTM · w256 · output 2',
-    desc:   'Wiki+OWT · BTM lineage · after slice-2 second pass · loss 4.77 · ppl 118',
+    desc:   'Wiki+OWT · BTM lineage · loss 4.77 · vocab corrupted at BTM start (see notes)',
     onnx:   `${RELEASE}/model_server_w256_out2.onnx`,
     vocab:  `${RELEASE}/vocab_server.json`,
     seqLen: 255,

@@ -9,7 +9,8 @@
 
   <!-- from output 1 -->
   <rect x="195" y="8" width="370" height="28" rx="5" fill="#0284c7"/>
-  <text x="380" y="27" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Server BTM · w256 · output 1  ·  loss ~4.75</text>
+  <text x="380" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Server BTM · w256 · output 1  ·  loss ~4.75</text>
+  <text x="380" y="34" text-anchor="middle" font-size="9" fill="#bae6fd">vocab corrupted at BTM start (see notes)</text>
 
   <line x1="380" y1="36" x2="380" y2="54" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
 
