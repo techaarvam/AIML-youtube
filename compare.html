@@ -40,21 +40,6 @@ h1 { color: #4a6fa5; font-size: 1.2em; letter-spacing: 0.02em; }
 }
 .prompt-chip:hover { background: #d8e8f8; border-color: #7aaad4; }
 
-.autorun-btn {
-  font-family: monospace;
-  font-size: 0.72em;
-  color: #fff;
-  background: #4a6fa5;
-  border: 1px solid #3a5a8f;
-  border-radius: 20px;
-  padding: 4px 14px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  white-space: nowrap;
-}
-.autorun-btn:hover { background: #3a5a8f; }
-.autorun-btn.running { background: #c0392b; border-color: #a93226; }
-.autorun-btn.running:hover { background: #a93226; }
 
 #vocab-status {
   font-size: 0.76em;
@@ -775,124 +760,6 @@ function renderLeaderboard(rankings) {
   }).join('');
 }
 
-// ── Autorun ───────────────────────────────────────────────────────────────────
-let autorunActive  = false;
-let autorunCount   = 0;
-let autorunCurrent = 0;
-const AUTO_TOKENS  = 256;
-const autoSeqs     = new Array(MODELS.length).fill(null);
-
-function toggleAutorun() {
-  autorunActive = !autorunActive;
-  const btn = document.getElementById('autorunBtn');
-  if (autorunActive) {
-    btn.textContent = '⏹ Stop';
-    btn.classList.add('running');
-    autorunCycle();
-  } else {
-    btn.textContent = '▶ Autorun';
-    btn.classList.remove('running');
-  }
-}
-
-async function autorunCycle() {
-  if (!autorunActive) return;
-
-  const prompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
-  autorunCount  = 0;
-
-  for (let idx = 0; idx < MODELS.length; idx++) {
-    const ta    = document.getElementById(`ta${idx}`);
-    const ghost = document.getElementById(`ghost${idx}`);
-    ta.value = prompt;
-    clearGhost(idx, prompt);
-    autoExpand(ta, ghost);
-    if (loadState[idx] === 'idle') loadModel(idx);
-  }
-
-  // Wait until all models have finished loading (or errored)
-  await new Promise(resolve => {
-    function check() {
-      if (!autorunActive) { resolve(); return; }
-      if (MODELS.every((_, i) => loadState[i] === 'ready' || loadState[i] === 'error')) resolve();
-      else setTimeout(check, 300);
-    }
-    check();
-  });
-
-  if (!autorunActive) return;
-
-  // Tokenize initial prompt per model (one Firebase call each)
-  await Promise.all(MODELS.map(async (m, idx) => {
-    if (loadState[idx] !== 'ready') { autoSeqs[idx] = null; return; }
-    try {
-      autoSeqs[idx] = [...(await tokenizeRemote(prompt, m.seqLen, m.id))];
-    } catch(e) { autoSeqs[idx] = null; }
-  }));
-
-  if (!autorunActive) return;
-  autorunCurrent = 0;
-  autorunStep();
-}
-
-async function autorunStep() {
-  if (!autorunActive) return;
-
-  const idx = autorunCurrent;
-  const m   = MODELS[idx];
-
-  if (sessions[idx] && modelVocabs[idx] && autoSeqs[idx]) {
-    const { reverseVocab, vocabSize, unkIdx } = modelVocabs[idx];
-    const seqLen = m.seqLen;
-    const seq    = autoSeqs[idx];
-
-    const tensor = new ort.Tensor(
-      'int64', BigInt64Array.from(seq.map(BigInt)), [1, seqLen]
-    );
-    let results;
-    try { results = await sessions[idx].run({ input: tensor }); }
-    catch(e) { results = null; }
-
-    if (results) {
-      const logits = results.logits.data;
-      const base   = (seqLen - 1) * vocabSize;
-      const TEMP = 0.7, TOP_K = 5;
-      const scored = [];
-      for (let i = 0; i < vocabSize; i++) {
-        if (i === unkIdx) continue;
-        scored.push([i, logits[base + i]]);
-      }
-      scored.sort((a, b) => b[1] - a[1]);
-      const topK = scored.slice(0, TOP_K);
-      const maxL = topK[0][1];
-      const expS = topK.map(([i, l]) => [i, Math.exp((l - maxL) / TEMP)]);
-      const sumE = expS.reduce((s, [, e]) => s + e, 0);
-      let r = Math.random() * sumE, bestId = expS[expS.length - 1][0];
-      for (const [i, e] of expS) { r -= e; if (r <= 0) { bestId = i; break; } }
-
-      seq.push(bestId);
-      seq.shift();
-
-      const word = reverseVocab[bestId] || '';
-      const ta   = document.getElementById(`ta${idx}`);
-      ta.value  += ' ' + word;
-      clearGhost(idx, ta.value);
-      autoExpand(ta, document.getElementById(`ghost${idx}`));
-      ta.scrollTop = ta.scrollHeight;
-    }
-  }
-
-  autorunCurrent = (autorunCurrent + 1) % MODELS.length;
-  autorunCount++;
-  if (!autorunActive) return;
-
-  if (autorunCount >= AUTO_TOKENS) {
-    await new Promise(r => setTimeout(r, 2000));
-    if (autorunActive) autorunCycle();
-  } else {
-    autorunStep();
-  }
-}
 
 // ── Prompt chips ─────────────────────────────────────────────────────────────
 function buildPrompts() {
@@ -914,13 +781,6 @@ function buildPrompts() {
     });
     container.appendChild(chip);
   });
-
-  const autoBtn = document.createElement('button');
-  autoBtn.id          = 'autorunBtn';
-  autoBtn.className   = 'autorun-btn';
-  autoBtn.textContent = '▶ Autorun';
-  autoBtn.addEventListener('click', toggleAutorun);
-  container.appendChild(autoBtn);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
