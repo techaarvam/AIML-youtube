@@ -713,7 +713,7 @@ async function runInference(idx) {
   }
 
   const predText = encoder
-    ? encoder.decode(predToks)          // js-tiktoken returns string directly
+    ? encoder.decode(new Uint32Array(predToks))  // js-tiktoken expects Uint32Array
     : ' ' + words.join(' ');
   setGhost(idx, text, predText);
   setStatus(idx, `${nPredict} tokens predicted`);
