@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" font-family="system-ui,sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
+    </marker>
+    <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3b82f6"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="620" fill="#0f172a"/>
+
+  <!-- Title -->
+  <text x="480" y="36" text-anchor="middle" font-size="17" font-weight="bold" fill="#e2e8f0">Run 5 — Progressive Inner-Dimension Expansion</text>
+  <text x="480" y="56" text-anchor="middle" font-size="11" fill="#64748b">vecDims=256 (frozen embedding/output) · 8 layers · 4 heads · window=256 · OpenWebText · stride=256</text>
+
+  <!-- ── Frozen embedding + output row ── -->
+  <rect x="60" y="76" width="840" height="34" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="480" y="98" text-anchor="middle" font-size="11" fill="#94a3b8">Frozen throughout: embedding [50257, 256] + outputLinear [50257, 256] = 25.8M params</text>
+
+  <!-- ── Stage boxes ── -->
+  <!-- d256 -->
+  <rect x="60" y="130" width="110" height="80" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="115" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#93c5fd">d256</text>
+  <text x="115" y="169" text-anchor="middle" font-size="10" fill="#60a5fa">~32M params</text>
+  <text x="115" y="183" text-anchor="middle" font-size="10" fill="#60a5fa">ep 1–30</text>
+  <text x="115" y="197" text-anchor="middle" font-size="9" fill="#3b82f6">lr 3e-4 · b512</text>
+
+  <!-- arrow d256→d384 -->
+  <line x1="170" y1="170" x2="200" y2="170" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="185" y="162" text-anchor="middle" font-size="9" fill="#64748b">sigma</text>
+  <text x="185" y="174" text-anchor="middle" font-size="9" fill="#64748b">noise</text>
+
+  <!-- d384 -->
+  <rect x="200" y="130" width="110" height="80" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="255" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#93c5fd">d384</text>
+  <text x="255" y="169" text-anchor="middle" font-size="10" fill="#60a5fa">~40M params</text>
+  <text x="255" y="183" text-anchor="middle" font-size="10" fill="#60a5fa">ep 31–70</text>
+  <text x="255" y="197" text-anchor="middle" font-size="9" fill="#3b82f6">lr 2.3e-4 · b384</text>
+
+  <!-- arrow -->
+  <line x1="310" y1="170" x2="340" y2="170" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="325" y="162" text-anchor="middle" font-size="9" fill="#64748b">sigma</text>
+  <text x="325" y="174" text-anchor="middle" font-size="9" fill="#64748b">noise</text>
+
+  <!-- d512 -->
+  <rect x="340" y="130" width="110" height="80" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="395" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#93c5fd">d512</text>
+  <text x="395" y="169" text-anchor="middle" font-size="10" fill="#60a5fa">~51M params</text>
+  <text x="395" y="183" text-anchor="middle" font-size="10" fill="#60a5fa">ep 71–120</text>
+  <text x="395" y="197" text-anchor="middle" font-size="9" fill="#3b82f6">lr 1.5e-4 · b256</text>
+
+  <!-- arrow -->
+  <line x1="450" y1="170" x2="480" y2="170" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="465" y="162" text-anchor="middle" font-size="9" fill="#64748b">sigma</text>
+  <text x="465" y="174" text-anchor="middle" font-size="9" fill="#64748b">noise</text>
+
+  <!-- d640 -->
+  <rect x="480" y="130" width="110" height="80" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="535" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#93c5fd">d640</text>
+  <text x="535" y="169" text-anchor="middle" font-size="10" fill="#60a5fa">~66M params</text>
+  <text x="535" y="183" text-anchor="middle" font-size="10" fill="#60a5fa">ep 121–190</text>
+  <text x="535" y="197" text-anchor="middle" font-size="9" fill="#3b82f6">lr 9.4e-5 · b160</text>
+
+  <!-- arrow -->
+  <line x1="590" y1="170" x2="620" y2="170" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="605" y="162" text-anchor="middle" font-size="9" fill="#64748b">sigma</text>
+  <text x="605" y="174" text-anchor="middle" font-size="9" fill="#64748b">noise</text>
+
+  <!-- d768 -->
+  <rect x="620" y="130" width="110" height="80" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="675" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#93c5fd">d768</text>
+  <text x="675" y="169" text-anchor="middle" font-size="10" fill="#60a5fa">~83M params</text>
+  <text x="675" y="183" text-anchor="middle" font-size="10" fill="#60a5fa">ep 191–270</text>
+  <text x="675" y="197" text-anchor="middle" font-size="9" fill="#3b82f6">lr 7.5e-5 · b128</text>
+
+  <!-- arrow -->
+  <line x1="730" y1="170" x2="760" y2="170" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="745" y="162" text-anchor="middle" font-size="9" fill="#64748b">sigma</text>
+  <text x="745" y="174" text-anchor="middle" font-size="9" fill="#64748b">noise</text>
+
+  <!-- d896 + d1024 stack below d768 to fit -->
+  <rect x="760" y="130" width="110" height="80" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="815" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#93c5fd">d896</text>
+  <text x="815" y="169" text-anchor="middle" font-size="10" fill="#60a5fa">~103M params</text>
+  <text x="815" y="183" text-anchor="middle" font-size="10" fill="#60a5fa">ep 271–375</text>
+  <text x="815" y="197" text-anchor="middle" font-size="9" fill="#3b82f6">lr 5.6e-5 · b96</text>
+
+  <!-- arrow d896→d1024 (down then right) -->
+  <polyline points="870,170 900,170 900,270 870,270" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="910" y="222" text-anchor="middle" font-size="9" fill="#64748b">sigma</text>
+  <text x="910" y="234" text-anchor="middle" font-size="9" fill="#64748b">noise</text>
+
+  <!-- d1024 (final) -->
+  <rect x="620" y="230" width="240" height="80" rx="5" fill="#1e3a5f" stroke="#60a5fa" stroke-width="2"/>
+  <text x="740" y="255" text-anchor="middle" font-size="13" font-weight="700" fill="#93c5fd">d1024 — Final</text>
+  <text x="740" y="273" text-anchor="middle" font-size="10" fill="#60a5fa">~127M params · ep 376–500 · lr 3.8e-5 · batch 64</text>
+  <text x="740" y="289" text-anchor="middle" font-size="10" fill="#60a5fa">Chinchilla 100% at ep 500 · 2,540M tokens total</text>
+  <text x="740" y="303" text-anchor="middle" font-size="9" fill="#3b82f6">ONNX → web_infer.html (GPT-2 tiktoken)</text>
+
+  <!-- ── Expansion strategy box ── -->
+  <rect x="60" y="240" width="530" height="130" rx="5" fill="#0f1f2e" stroke="#334155" stroke-width="1.5"/>
+  <text x="325" y="262" text-anchor="middle" font-size="12" font-weight="600" fill="#94a3b8">extend_dims_sigma.py — Expansion Strategy</text>
+
+  <text x="80" y="284" font-size="11" fill="#60a5fa">Old weights:</text>
+  <text x="175" y="284" font-size="11" fill="#94a3b8">preserved exactly in top-left block [0:d, 0:d] of each matrix</text>
+  <text x="80" y="302" font-size="11" fill="#60a5fa">New-new diag:</text>
+  <text x="175" y="302" font-size="11" fill="#94a3b8">0.01 × median(σ) — noise proportional to spectral scale</text>
+  <text x="80" y="320" font-size="11" fill="#60a5fa">Upscale/down:</text>
+  <text x="175" y="320" font-size="11" fill="#94a3b8">old rows/cols preserved; new rows/cols get sigma noise</text>
+  <text x="80" y="338" font-size="11" fill="#60a5fa">LR scaling:</text>
+  <text x="175" y="338" font-size="11" fill="#94a3b8">lr ∝ batch_size (linear rule, reference d256: lr=3e-4, batch=512)</text>
+  <text x="80" y="356" font-size="11" fill="#60a5fa">Epoch counter:</text>
+  <text x="175" y="356" font-size="11" fill="#94a3b8">cumulative across all stages — shard cycling = epoch % 20</text>
+
+  <!-- ── Chinchilla bar ── -->
+  <rect x="60" y="390" width="840" height="36" rx="4" fill="#0f1f2e" stroke="#334155" stroke-width="1.5"/>
+  <text x="70" y="412" font-size="11" fill="#64748b">Chinchilla %:</text>
+  <!-- d256 segment -->
+  <rect x="155" y="395" width="45" height="25" rx="2" fill="#1d4ed8"/>
+  <text x="177" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d256</text>
+  <!-- d384 -->
+  <rect x="200" y="395" width="55" height="25" rx="2" fill="#1e40af"/>
+  <text x="227" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d384</text>
+  <!-- d512 -->
+  <rect x="255" y="395" width="70" height="25" rx="2" fill="#1e3a8a"/>
+  <text x="290" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d512</text>
+  <!-- d640 -->
+  <rect x="325" y="395" width="90" height="25" rx="2" fill="#172554"/>
+  <text x="370" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d640</text>
+  <!-- d768 -->
+  <rect x="415" y="395" width="110" height="25" rx="2" fill="#0c1a3d"/>
+  <text x="470" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d768</text>
+  <!-- d896 -->
+  <rect x="525" y="395" width="135" height="25" rx="2" fill="#091229"/>
+  <text x="592" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d896</text>
+  <!-- d1024 -->
+  <rect x="660" y="395" width="165" height="25" rx="2" fill="#060c18"/>
+  <text x="742" y="412" text-anchor="middle" font-size="9" fill="#93c5fd">d1024 → 100%</text>
+  <text x="835" y="412" text-anchor="start" font-size="10" fill="#475569">100%</text>
+
+  <!-- ── Data / checkpoint flow ── -->
+  <rect x="60" y="445" width="840" height="70" rx="4" fill="#0f1f2e" stroke="#334155" stroke-width="1.5"/>
+  <text x="480" y="466" text-anchor="middle" font-size="11" font-weight="600" fill="#94a3b8">Automated Pipeline — run_progressive.sh</text>
+
+  <text x="80" y="486" font-size="10" fill="#60a5fa">Data:</text>
+  <text x="120" y="486" font-size="10" fill="#94a3b8">20 OpenWebText shards · 9.1B tokens · all 4 machines · shard = epoch % 20</text>
+  <text x="80" y="502" font-size="10" fill="#60a5fa">Checkpoints:</text>
+  <text x="150" y="502" font-size="10" fill="#94a3b8">runs/progressive/checkpoint/model.pth  overwritten every 5 epochs (stage handoff)</text>
+  <text x="80" y="518" font-size="10" fill="#60a5fa">Metrics CSV:</text>
+  <text x="150" y="518" font-size="10" fill="#94a3b8">runs/progressive/entropy.csv  appended every 5 epochs in-process · all SVD metrics</text>
+
+  <!-- ── Bottom legend ── -->
+  <rect x="60" y="530" width="840" height="72" rx="4" fill="#0f1f2e" stroke="#334155" stroke-width="1.5"/>
+  <text x="480" y="550" text-anchor="middle" font-size="11" font-weight="600" fill="#94a3b8">Key Fixes vs Run 4</text>
+  <text x="80"  y="568" font-size="10" fill="#ef4444">✗ Run 4:</text>
+  <text x="130" y="568" font-size="10" fill="#94a3b8">d=embedding.weight.shape[1]=256 used as inner_dims boundary → corrupted [256:d, 256:d] of all matrices from 384→512 expansion</text>
+  <text x="80"  y="586" font-size="10" fill="#22c55e">✓ Run 5:</text>
+  <text x="130" y="586" font-size="10" fill="#94a3b8">d=Wo.0.shape[0] (actual inner_dims) · upscale/downscale carry trained weights · new rows get sigma noise · no plateau scheduler</text>
+  <text x="80"  y="596" font-size="10" fill="#94a3b8">                pin_memory=True + non_blocking=True (GPU pipeline) · ProcessPoolExecutor for tokenizer (no GIL contention)</text>
+</svg>

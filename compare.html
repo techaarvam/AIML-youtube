@@ -490,6 +490,16 @@ const MODELS = [
     seqLen: 255,
     svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
   },
+  {
+    id:       'btm_d1024',
+    name:     'BTM d1024 · Run 4',
+    desc:     'OpenWebText · 127M params · GPT-2 BPE · progressive expansion · loss 5.09',
+    onnx:     `${RELEASE}/btm_d1024.onnx`,
+    vocab:    null,          // GPT-2 BPE — tokenized client-side via js-tiktoken
+    seqLen:   255,
+    svgs:     ['run5_progressive.svg'],
+    tiktoken: 'gpt2',
+  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -603,17 +613,33 @@ async function loadModel(idx) {
   setStatus(idx, `loading model… (300 MB, may take a minute)`);
   document.getElementById(`lb${idx}`).classList.add('active');
   try {
-    const [session, vocabData] = await Promise.all([
-      ort.InferenceSession.create(MODELS[idx].onnx, { executionProviders: ['wasm'] }),
-      fetch(MODELS[idx].vocab).then(r => r.json()),
-    ]);
-    sessions[idx] = session;
-    const unkI = vocabData['<unk>'] ?? -1;
-    modelVocabs[idx] = {
-      reverseVocab: Object.fromEntries(Object.entries(vocabData).map(([w, i]) => [i, w])),
-      vocabSize:    Object.keys(vocabData).length,
-      unkIdx:       unkI,
-    };
+    const m = MODELS[idx];
+    let session, vocabMeta;
+
+    if (m.tiktoken) {
+      // GPT-2 BPE — load tiktoken and ONNX in parallel
+      const [sess, tikMod] = await Promise.all([
+        ort.InferenceSession.create(m.onnx, { executionProviders: ['wasm'] }),
+        import('https://esm.sh/js-tiktoken@1.0.12').then(mod => mod.getEncoding(m.tiktoken)),
+      ]);
+      session = sess;
+      vocabMeta = { encoder: tikMod, vocabSize: 50257, unkIdx: -1 };
+    } else {
+      const [sess, vocabData] = await Promise.all([
+        ort.InferenceSession.create(m.onnx, { executionProviders: ['wasm'] }),
+        fetch(m.vocab).then(r => r.json()),
+      ]);
+      session = sess;
+      const unkI = vocabData['<unk>'] ?? -1;
+      vocabMeta = {
+        reverseVocab: Object.fromEntries(Object.entries(vocabData).map(([w, i]) => [i, w])),
+        vocabSize:    Object.keys(vocabData).length,
+        unkIdx:       unkI,
+      };
+    }
+
+    sessions[idx]    = session;
+    modelVocabs[idx] = vocabMeta;
     loadState[idx] = 'ready';
     setDot(idx, 'ready');
     document.getElementById(`lb${idx}`).classList.remove('active');
@@ -640,15 +666,27 @@ async function runInference(idx) {
   const text = ta.value;
   if (!text.trim()) { setGhost(idx, text, ''); return; }
 
-  const seqLen  = MODELS[idx].seqLen;
-  const modelId = MODELS[idx].id;
+  const seqLen   = MODELS[idx].seqLen;
+  const modelId  = MODELS[idx].id;
+  const { encoder, reverseVocab, vocabSize, unkIdx } = modelVocabs[idx];
   let ids;
-  try {
-    ids = await tokenizeRemote(text, seqLen, modelId);
-  } catch(e) { setStatus(idx, `tokenize error: ${e.message}`); return; }
 
-  const window = [...ids];
-  const words  = [];
+  if (encoder) {
+    // GPT-2 BPE — tokenize client-side, right-pad to seqLen
+    const encoded = Array.from(encoder.encode(text));
+    const trimmed = encoded.slice(-seqLen);
+    ids = new Array(seqLen).fill(0);
+    const offset = seqLen - trimmed.length;
+    trimmed.forEach((t, i) => { ids[offset + i] = t; });
+  } else {
+    try {
+      ids = await tokenizeRemote(text, seqLen, modelId);
+    } catch(e) { setStatus(idx, `tokenize error: ${e.message}`); return; }
+  }
+
+  const window    = [...ids];
+  const predToks  = [];   // accumulate token IDs for BPE decoding
+  const words     = [];   // for word-vocab models
   setStatus(idx, 'predicting…');
 
   for (let step = 0; step < PREDICT_TOKENS; step++) {
@@ -659,16 +697,23 @@ async function runInference(idx) {
     try { results = await sessions[idx].run({ input: tensor }); }
     catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
 
-    const logits = results.logits.data;
-    const { reverseVocab, vocabSize, unkIdx } = modelVocabs[idx];
+    const logits  = results.logits.data;
     const base    = (seqLen - 1) * vocabSize;
     const bestIdx = sampleToken(logits, base, vocabSize, unkIdx);
-    words.push(reverseVocab[bestIdx] || '');
+
+    if (encoder) {
+      predToks.push(bestIdx);
+    } else {
+      words.push(reverseVocab[bestIdx] || '');
+    }
     window.push(bestIdx);
     window.shift();
   }
 
-  setGhost(idx, text, ' ' + words.join(' '));
+  const predText = encoder
+    ? new TextDecoder().decode(encoder.decode(new Uint32Array(predToks)))
+    : ' ' + words.join(' ');
+  setGhost(idx, text, predText);
   setStatus(idx, `${PREDICT_TOKENS} tokens predicted`);
 }
 
