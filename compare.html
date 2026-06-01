@@ -491,14 +491,15 @@ const MODELS = [
     svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
   },
   {
-    id:       'btm_d1024',
-    name:     'BTM d1024 · Run 4',
-    desc:     'OpenWebText · 127M params · GPT-2 BPE · progressive expansion · loss 5.09',
-    onnx:     `${RELEASE}/btm_d1024.onnx`,
-    vocab:    null,          // GPT-2 BPE — tokenized client-side via js-tiktoken
-    seqLen:   255,
-    svgs:     ['run5_progressive.svg'],
-    tiktoken: 'gpt2',
+    id:            'btm_d1024',
+    name:          'BTM d1024 · Run 4',
+    desc:          'OpenWebText · 127M params · GPT-2 BPE · progressive expansion · loss 5.09',
+    onnx:          `${RELEASE}/btm_d1024.onnx`,
+    vocab:         null,     // GPT-2 BPE — tokenized client-side via js-tiktoken
+    seqLen:        255,
+    svgs:          ['run5_progressive.svg'],
+    tiktoken:      'gpt2',
+    predictTokens: 2,        // 127M WASM is slower — 2 tokens keeps it responsive
   },
 ];
 
@@ -687,9 +688,10 @@ async function runInference(idx) {
   const window    = [...ids];
   const predToks  = [];   // accumulate token IDs for BPE decoding
   const words     = [];   // for word-vocab models
+  const nPredict  = MODELS[idx].predictTokens ?? PREDICT_TOKENS;
   setStatus(idx, 'predicting…');
 
-  for (let step = 0; step < PREDICT_TOKENS; step++) {
+  for (let step = 0; step < nPredict; step++) {
     const tensor = new ort.Tensor(
       'int64', BigInt64Array.from(window.map(BigInt)), [1, seqLen]
     );
@@ -714,7 +716,7 @@ async function runInference(idx) {
     ? new TextDecoder().decode(encoder.decode(new Uint32Array(predToks)))
     : ' ' + words.join(' ');
   setGhost(idx, text, predText);
-  setStatus(idx, `${PREDICT_TOKENS} tokens predicted`);
+  setStatus(idx, `${nPredict} tokens predicted`);
 }
 
 // ── Ghost text ────────────────────────────────────────────────────────────────
