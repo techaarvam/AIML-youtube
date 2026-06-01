@@ -1,30 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="264" font-family="system-ui,sans-serif" font-size="12">
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" font-family="system-ui,sans-serif" font-size="12">
   <defs>
     <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
       <path d="M0,0 L0,6 L8,3 z" fill="#64748b"/>
     </marker>
   </defs>
 
-  <rect width="480" height="264" fill="#f8fafc"/>
+  <rect width="480" height="280" fill="#f8fafc"/>
 
   <text x="240" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">Server Continuation · w128</text>
-  <text x="240" y="43" text-anchor="middle" font-size="11" fill="#64748b">from local w128 adapt · epoch 8 → 9 → 10 cycling</text>
-  <text x="240" y="58" text-anchor="middle" font-size="10" fill="#b45309">⚠ vocab mismatch — trained with vocab_server, starting weights indexed for vocab_local</text>
+  <text x="240" y="43" text-anchor="middle" font-size="11" fill="#64748b">from BTM w128 adapt · epoch 9/10/8 cycling · 4 epochs · ~40M tokens</text>
 
-  <!-- local w128 adapt base -->
-  <rect x="50" y="68" width="380" height="34" rx="5" fill="#1e40af" stroke="#1e3a8a" stroke-width="1.5"/>
-  <text x="240" y="90" text-anchor="middle" font-size="12" font-weight="600" fill="white">model_local_w128  ·  loss 3.849</text>
+  <!-- BTM w128 adapted base -->
+  <rect x="50" y="56" width="380" height="48" rx="5" fill="#1e40af" stroke="#1e3a8a" stroke-width="1.5"/>
+  <text x="240" y="76" text-anchor="middle" font-size="11" font-weight="600" fill="white">model_epoch7_sequential_w128_adapted.pth</text>
+  <text x="240" y="95" text-anchor="middle" font-size="11" fill="#bfdbfe">BTM lineage w128  ·  loss 4.926</text>
 
-  <line x1="240" y1="102" x2="240" y2="120" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="240" y1="104" x2="240" y2="122" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- server continuation -->
-  <rect x="50" y="120" width="380" height="54" rx="6" fill="#f3e8ff" stroke="#c084fc" stroke-width="1.5"/>
-  <text x="240" y="142" text-anchor="middle" font-size="12" font-weight="600" fill="#4a044e">epoch_8 · epoch_9 · epoch_10  ·  cycling 20 epochs</text>
-  <text x="240" y="162" text-anchor="middle" fill="#374151">Wiki+OWT · batch 512 · lr 0.001 · server GPU</text>
+  <rect x="50" y="122" width="380" height="76" rx="6" fill="#f3e8ff" stroke="#c084fc" stroke-width="1.5"/>
+  <text x="240" y="142" text-anchor="middle" font-size="12" font-weight="600" fill="#4a044e">epoch_9 · epoch_10 · epoch_8  ·  cycling</text>
+  <text x="240" y="160" text-anchor="middle" fill="#374151">Wiki+OWT · batch 512 · lr 0.001 · server GPU</text>
+  <text x="240" y="178" text-anchor="middle" font-size="11" fill="#374151">ep1: —  ·  ep2: 4.7026  ·  ep3: 4.3366  ·  ep4: 4.2110</text>
 
-  <line x1="240" y1="174" x2="240" y2="192" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="240" y1="198" x2="240" y2="216" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- output -->
-  <rect x="100" y="192" width="280" height="26" rx="5" fill="#92400e"/>
-  <text x="240" y="209" text-anchor="middle" font-size="12" font-weight="bold" fill="white">model_server_w128  ·  loss 4.211  ·  vocab suspect</text>
+  <rect x="100" y="216" width="280" height="28" rx="5" fill="#1d4ed8"/>
+  <text x="240" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="white">model_server_w128  ·  loss 4.211  ·  ~774M tokens</text>
 </svg>

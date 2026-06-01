@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unix Shell Dojo — Speed Exercises</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-YD293P969Q"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-YD293P969Q');</script>
+<style>
+:root {
+  --bg: #f3efe6; --panel: #fffaf0; --ink: #1e1d1a; --muted: #6d6659;
+  --line: #d7cfbf; --accent: #2d7a4f; --accent-soft: #d4edda;
+  --green: #2d7a4f; --green-soft: #d4edda; --red: #c0392b; --red-soft: #fce4e4;
+  --navy: #0d1f12; --navy-mid: #132d1c;
+  --cbg: #0d1117; --cfg: #e6edf3; --ckw: #ff7b72; --cstr: #a5d6ff;
+  --cnum: #ffa657; --cfn: #79c0ff; --ccm: #8b949e; --cop: #56d364;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+[hidden]{display:none!important;}
+
+/* ── INTRO ── */
+#intro{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;background:radial-gradient(ellipse at 60% 30%,#132d1c 0%,#0d1f12 70%);color:white;}
+.badge{font-size:3.5rem;margin-bottom:12px;}
+.intro-title{font-size:2.4rem;font-weight:800;color:#7ee787;margin-bottom:8px;}
+.intro-sub{font-size:1rem;color:#a8c8a8;max-width:540px;line-height:1.6;margin-bottom:28px;}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:680px;margin-bottom:36px;}
+.feat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;font-size:.85rem;color:#c8d8c8;}
+.feat strong{display:block;color:#7ee787;font-size:1rem;margin-bottom:3px;}
+.btn-p{background:linear-gradient(135deg,#2d7a4f,#3fa863);color:white;border:none;border-radius:12px;padding:14px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 120ms,box-shadow 120ms;box-shadow:0 4px 18px rgba(45,122,79,.4);}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(45,122,79,.5);}
+.btn-s{background:transparent;color:#a8c8a8;border:1px solid rgba(168,200,168,.3);border-radius:10px;padding:10px 22px;font-size:.9rem;cursor:pointer;transition:color 120ms,border-color 120ms;font-family:inherit;}
+.btn-s:hover{color:white;border-color:rgba(255,255,255,.5);}
+.row-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+/* ── SLIDES ── */
+#slides{min-height:100vh;background:var(--navy);color:white;display:flex;flex-direction:column;}
+.sl-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sl-dots{display:flex;gap:6px;}
+.sl-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.18);transition:background 200ms;}
+.sl-dot.active{background:#7ee787;}
+.sl-dot.done{background:rgba(255,255,255,.45);}
+.sl-body{flex:1;padding:36px 28px;max-width:900px;margin:0 auto;width:100%;}
+.sl-chip{display:inline-block;background:rgba(126,231,135,.12);color:#7ee787;border:1px solid rgba(126,231,135,.28);border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.sl-title{font-size:1.9rem;font-weight:800;margin-bottom:6px;line-height:1.2;}
+.sl-sub{font-size:1rem;color:#a8c8a8;margin-bottom:24px;}
+.sl-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+@media(max-width:660px){.sl-grid{grid-template-columns:1fr;} .sl-title{font-size:1.4rem;}}
+.sl-pts{display:grid;gap:10px;}
+.sl-pt{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;color:#c8d8c8;line-height:1.5;}
+.sl-pt-n{flex-shrink:0;width:20px;height:20px;background:rgba(126,231,135,.14);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#7ee787;font-weight:700;margin-top:2px;}
+.sl-pt code,.ic{background:rgba(255,255,255,.08);color:#79c0ff;padding:1px 5px;border-radius:4px;font-family:'Fira Code',monospace;font-size:.84em;}
+.hi{background:rgba(45,122,79,.1);border:1px solid rgba(45,122,79,.28);border-left:3px solid #2d7a4f;border-radius:8px;padding:11px 14px;font-size:.85rem;color:#a5d6a7;line-height:1.5;margin-top:10px;}
+pre.cb{background:var(--cbg);border-radius:10px;padding:16px 18px;font-family:'Fira Code','Cascadia Code','Courier New',monospace;font-size:.82rem;line-height:1.7;overflow-x:auto;color:var(--cfg);white-space:pre;}
+pre.cb .kw{color:var(--ckw);}
+pre.cb .fn{color:var(--cfn);}
+pre.cb .str{color:var(--cstr);}
+pre.cb .num{color:var(--cnum);}
+pre.cb .cm{color:var(--ccm);font-style:italic;}
+pre.cb .op{color:var(--cop);}
+pre.cb .pr{color:#ffa657;} /* prompt $ */
+.sl-foot{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.08);}
+.btn-sl{background:rgba(255,255,255,.08);color:white;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:9px 20px;font-size:.9rem;cursor:pointer;transition:background 120ms;font-family:inherit;}
+.btn-sl:hover{background:rgba(255,255,255,.14);}
+.btn-slp{background:linear-gradient(135deg,#2d7a4f,#3fa863);border-color:transparent;font-weight:600;}
+.btn-slp:hover{opacity:.9;}
+.sl-ctr{color:#a8c8a8;font-size:.85rem;}
+
+/* ── GAME ── */
+#game{min-height:100vh;background:var(--bg);padding-bottom:40px;}
+.g-hdr{background:var(--navy);color:white;padding:12px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.g-hdr-left{flex:1;min-width:0;}
+.g-topic{font-size:.7rem;color:#a8c8a8;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.g-qlbl{font-size:.95rem;font-weight:700;color:#7ee787;}
+.g-stats{display:flex;align-items:center;gap:16px;}
+.sbox{text-align:center;}
+.slbl{font-size:.65rem;color:#a8c8a8;text-transform:uppercase;letter-spacing:.06em;}
+.sval{font-size:1.3rem;font-weight:800;color:#7ee787;line-height:1;}
+.cbox{background:rgba(126,231,135,.08);border:1px solid rgba(126,231,135,.25);border-radius:8px;padding:5px 10px;text-align:center;min-width:64px;transition:background 300ms,border-color 300ms;}
+.cbox.hot{background:rgba(126,231,135,.22);border-color:#7ee787;}
+.clbl{font-size:.6rem;color:#a8c8a8;text-transform:uppercase;letter-spacing:.06em;}
+.cval{font-size:.95rem;font-weight:700;color:#7ee787;}
+.tw{position:relative;width:68px;height:68px;flex-shrink:0;}
+.tr{transform:rotate(-90deg);width:68px;height:68px;}
+.t-track{fill:none;stroke:var(--line);stroke-width:4;}
+.t-fill{fill:none;stroke:#2d7a4f;stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke 600ms;}
+.t-fill.warn{stroke:#f39c12;}
+.t-fill.danger{stroke:#c0392b;}
+.t-fill.read{stroke:#5b8dd9;}
+.opt:disabled{opacity:.35;cursor:not-allowed;}
+.t-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.1rem;font-weight:800;color:var(--ink);}
+.q-timer-area{display:flex;align-items:center;gap:16px;margin:14px 0 18px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+.timer-actions{display:flex;flex-direction:column;gap:8px;flex:1;}
+.timer-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px;}
+.btn-finish-read{background:#5b8dd9;color:white;border:none;border-radius:8px;padding:9px 16px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background 120ms,transform 80ms;text-align:left;}
+.btn-finish-read:hover{background:#4a7bc4;transform:translateY(-1px);}
+.btn-skip{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(45,122,79,.25);border-radius:8px;padding:9px 16px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background 120ms,transform 80ms;text-align:left;}
+.btn-skip:hover{background:#b8ddc0;transform:translateY(-1px);}
+.prog-wrap{height:4px;background:var(--line);}
+.prog-fill{height:100%;background:linear-gradient(90deg,#2d7a4f,#3fa863);transition:width 300ms ease;}
+.q-area{max-width:780px;margin:28px auto;padding:0 22px;}
+.t-chip{display:inline-block;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(45,122,79,.18);border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.q-card{background:white;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 4px 22px rgba(26,58,26,.07);}
+.q-text{font-size:1.05rem;line-height:1.6;font-weight:600;margin-bottom:14px;color:var(--ink);}
+pre.q-code{background:var(--cbg);border-radius:8px;padding:12px 14px;font-family:'Fira Code','Cascadia Code',monospace;font-size:.82rem;line-height:1.6;color:var(--cfg);margin-bottom:18px;overflow-x:auto;white-space:pre;}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+@media(max-width:560px){.opts{grid-template-columns:1fr;}}
+.opt{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;cursor:pointer;font-size:.88rem;color:var(--ink);font-family:inherit;transition:border-color 120ms,background 120ms,transform 80ms;line-height:1.4;}
+.opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft);transform:translateY(-1px);}
+.opt:disabled{cursor:default;}
+.opt.correct{background:#d4edda;border-color:#2d7a4f;color:#1a4d2e;}
+.opt.wrong{background:#fce4e4;border-color:#c0392b;color:#7b1414;}
+.opt.reveal{background:#fff9e6;border-color:#f39c12;}
+.o-ltr{display:inline-block;width:20px;height:20px;background:var(--line);border-radius:5px;text-align:center;line-height:20px;font-size:.7rem;font-weight:700;margin-right:7px;vertical-align:middle;flex-shrink:0;}
+.expl{margin-top:14px;background:#f0f7ff;border:1px solid #bee3ff;border-left:3px solid #3498db;border-radius:8px;padding:10px 14px;font-size:.86rem;color:#1a3a5c;line-height:1.5;display:none;}
+.expl.show{display:block;}
+.next-row{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:none;}
+.q-ctr{font-size:.82rem;color:var(--muted);}
+.pp{position:fixed;top:74px;right:22px;background:var(--navy);color:#7ee787;border-radius:10px;padding:10px 18px;font-size:1.1rem;font-weight:800;box-shadow:0 4px 18px rgba(0,0,0,.3);transform:translateY(-8px);opacity:0;transition:transform 280ms,opacity 280ms;pointer-events:none;z-index:100;}
+.pp.show{transform:translateY(0);opacity:1;}
+
+/* ── END ── */
+#end{min-height:100vh;background:radial-gradient(ellipse at 60% 30%,#132d1c 0%,#0d1f12 70%);color:white;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:44px 22px;}
+.end-trophy{font-size:3.5rem;margin-bottom:12px;}
+.end-title{font-size:2rem;font-weight:800;color:#7ee787;margin-bottom:6px;}
+.end-score{font-size:3.2rem;font-weight:900;color:white;margin-bottom:2px;}
+.end-slbl{font-size:.9rem;color:#a8c8a8;margin-bottom:26px;}
+.rank{display:inline-block;padding:7px 22px;border-radius:22px;font-size:1rem;font-weight:700;margin-bottom:26px;}
+.rank-s{background:linear-gradient(135deg,#7ee787,#3fa863);color:#0d1f12;}
+.rank-a{background:linear-gradient(135deg,#56d364,#2d7a4f);color:#0d1f12;}
+.rank-b{background:rgba(126,231,135,.14);border:1px solid rgba(126,231,135,.38);color:#7ee787;}
+.rank-c{background:rgba(168,200,168,.1);border:1px solid rgba(168,200,168,.28);color:#a8c8a8;}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;max-width:660px;width:100%;margin-bottom:28px;}
+.rc{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;text-align:center;}
+.rc-v{font-size:1.5rem;font-weight:800;color:#7ee787;}
+.rc-l{font-size:.75rem;color:#a8c8a8;margin-top:3px;}
+.missed-list{max-width:660px;width:100%;margin-bottom:22px;}
+.mi{background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.18);border-radius:10px;padding:10px 14px;margin-bottom:7px;font-size:.82rem;color:#e0c0bc;}
+.mi strong{display:block;color:white;margin-bottom:3px;}
+.mi-ans{color:#56d364;font-size:.8rem;margin-top:3px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.survey-cta{margin-top:34px;padding:22px 28px;background:rgba(126,231,135,.07);border:1px solid rgba(126,231,135,.22);border-radius:14px;max-width:520px;width:100%;text-align:center;}
+.survey-lbl{font-size:.78rem;font-weight:700;letter-spacing:.08em;color:#7ee787;text-transform:uppercase;margin-bottom:8px;}
+.survey-txt{color:#a8c8a8;font-size:.9rem;line-height:1.55;margin:0 0 16px;}
+.survey-btn{display:inline-block;background:linear-gradient(135deg,#7ee787,#2d7a4f);color:#0d1f12;font-weight:700;font-size:.92rem;padding:11px 26px;border-radius:24px;text-decoration:none;transition:opacity 150ms;}
+.survey-btn:hover{opacity:.82;}
+.anim{animation:fadeUp 240ms ease forwards;}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="badge">🐚</div>
+  <h1 class="intro-title">Unix Shell Dojo</h1>
+  <p class="intro-sub">Master the command line through speed challenges. Navigate, search, and automate — the survival kit every developer needs.</p>
+  <div class="feats">
+    <div class="feat"><strong>12 Slides</strong>Core commands with real examples</div>
+    <div class="feat"><strong>52 Exercises</strong>Navigation → grep → bash loops</div>
+    <div class="feat"><strong>Timer Scoring</strong>Speed earns bonus points</div>
+    <div class="feat"><strong>Real Patterns</strong>Commands you'll use every day</div>
+  </div>
+  <div class="row-btns">
+    <button class="btn-p" onclick="startSlides()">Start Learning ▶</button>
+    <button class="btn-s" onclick="skipToGame()">Skip to Game ⚡</button>
+  </div>
+</div>
+
+<!-- SLIDES -->
+<div id="slides" hidden>
+  <div class="sl-nav">
+    <div class="sl-dots" id="sl-dots"></div>
+    <button class="btn-s" onclick="skipToGame()" style="font-size:.82rem;padding:7px 16px;">Skip to Game ⚡</button>
+  </div>
+  <div class="sl-body" id="sl-body"></div>
+  <div class="sl-foot">
+    <button class="btn-sl" id="btn-prev" onclick="prevSlide()">← Back</button>
+    <span class="sl-ctr" id="sl-ctr"></span>
+    <button class="btn-sl btn-slp" id="btn-next" onclick="nextSlide()">Next →</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" hidden>
+  <div class="g-hdr">
+    <div class="g-hdr-left">
+      <div class="g-topic" id="g-topic"></div>
+      <div class="g-qlbl" id="g-qlbl"></div>
+    </div>
+    <div class="g-stats">
+      <div class="sbox"><div class="slbl">Score</div><div class="sval" id="g-score">0</div></div>
+      <div class="cbox" id="g-cbox"><div class="clbl">Combo</div><div class="cval" id="g-combo">×1</div></div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+  <div class="q-area">
+    <div class="t-chip" id="q-chip"></div>
+    <div class="q-card anim" id="q-card">
+      <div class="q-text" id="q-text"></div>
+      <pre class="q-code" id="q-code" style="display:none;"></pre>
+      <div class="q-timer-area" id="q-timer-area">
+        <div class="tw">
+          <svg class="tr" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="22" class="t-track"/>
+            <circle cx="26" cy="26" r="22" class="t-fill" id="t-fill"/>
+          </svg>
+          <span class="t-txt" id="t-txt">20</span>
+        </div>
+        <div class="timer-actions">
+          <div class="timer-label">Time remaining</div>
+          <button class="btn-finish-read" id="btn-finish-read" onclick="finishedReading()">Finished Reading ✓</button>
+          <button class="btn-skip" id="btn-skip" onclick="skipQuestion()" style="display:none;">Skip to Next Question →</button>
+        </div>
+      </div>
+      <div class="opts" id="opts"></div>
+      <div class="expl" id="expl"></div>
+      <div class="next-row" id="next-row">
+        <span class="q-ctr" id="q-ctr"></span>
+        <button class="btn-p" onclick="nextQ()" style="padding:9px 22px;font-size:.9rem;">Next →</button>
+      </div>
+    </div>
+  </div>
+  <div class="pp" id="pp"></div>
+</div>
+
+<!-- END -->
+<div id="end" hidden>
+  <div class="end-trophy" id="end-trophy">🏆</div>
+  <h1 class="end-title" id="end-ttl">Dojo Complete!</h1>
+  <div class="end-score" id="end-score">0</div>
+  <div class="end-slbl">Total Points</div>
+  <div class="rank" id="end-rank">Rank B</div>
+  <div class="res-grid">
+    <div class="rc"><div class="rc-v" id="r-correct">0</div><div class="rc-l">Correct</div></div>
+    <div class="rc"><div class="rc-v" id="r-acc">0%</div><div class="rc-l">Accuracy</div></div>
+    <div class="rc"><div class="rc-v" id="r-combo">×1</div><div class="rc-l">Best Combo</div></div>
+    <div class="rc"><div class="rc-v" id="r-speed">0s</div><div class="rc-l">Avg Speed</div></div>
+  </div>
+  <div class="missed-list" id="missed-wrap"></div>
+  <div class="row-btns">
+    <button class="btn-p" onclick="restartGame()">Play Again ↺</button>
+    <button class="btn-s" onclick="reviewSlides()">Review Slides 📖</button>
+  </div>
+  <div class="survey-cta">
+    <div class="survey-lbl">Keep Exploring</div>
+    <p class="survey-txt">Next up: shell scripting, awk, sed, cron, ssh, and process management. If you want that module, let us know!</p>
+    <a class="survey-btn" href="https://docs.google.com/forms/d/e/1FAIpQLScJb1qJdfr6Mt80lhhciBEcI-sSry5D_-6vVQlkrnP81FrHDA/viewform?usp=header" target="_blank" rel="noopener">Register Interest in Module 2 →</a>
+  </div>
+</div>
+
+<script>
+// ── SLIDE DATA ──────────────────────────────────────────────────────────────
+const SLIDES = [
+{n:"01",title:"Navigation",sub:"pwd, ls, cd — your first moves",
+ pts:["<code>pwd</code> — Print Working Directory. Shows exactly where you are in the filesystem.",
+      "<code>ls</code> — list files and directories in current location.",
+      "<code>cd path</code> — Change Directory. <code>cd /etc</code> goes to absolute path; <code>cd logs</code> goes relative.",
+      "<code>cd ..</code> — go up one level; <code>cd ../..</code> — go up two levels.",
+      "<code>cd ~</code> — jump to your home directory from anywhere.",
+      "<code>cd -</code> — toggle back to the <em>previous</em> directory (very handy!)."],
+ code:`<span class="pr">$</span> <span class="fn">pwd</span>
+/home/alice/projects
+
+<span class="pr">$</span> <span class="fn">ls</span>
+README.md  src/  tests/  venv/
+
+<span class="pr">$</span> <span class="fn">cd</span> src
+<span class="pr">$</span> <span class="fn">cd</span> ..        <span class="cm"># back to projects/</span>
+<span class="pr">$</span> <span class="fn">cd</span> -         <span class="cm"># toggle to src/ again</span>
+<span class="pr">$</span> <span class="fn">cd</span> ~         <span class="cm"># jump home</span>`,
+ hi:"cd with no arguments also takes you home. cd - is the fastest way to bounce between two directories."},
+
+{n:"02",title:"Listing Files — ls Options",sub:"Read the directory like a pro",
+ pts:["<code>ls -l</code> — long format: permissions, owner, size (bytes), date, name.",
+      "<code>ls -a</code> — show <em>all</em> files including hidden dotfiles (names starting with <code>.</code>).",
+      "<code>ls -t</code> — sort by modification time, newest first.",
+      "<code>ls -r</code> — reverse the sort order.",
+      "<code>ls -ltr</code> — long + time-sorted + reversed = <strong>oldest first</strong>. Great for finding what changed most recently (it's at the bottom).",
+      "<code>ls -lh</code> — human-readable sizes: KB, MB, GB instead of raw bytes."],
+ code:`<span class="pr">$</span> <span class="fn">ls</span> -l
+-rw-r--r-- 1 alice dev  4096 May 20 09:12 app.py
+drwxr-xr-x 2 alice dev  4096 May 18 14:30 logs/
+
+<span class="pr">$</span> <span class="fn">ls</span> -ltr      <span class="cm"># oldest at top, newest at bottom</span>
+<span class="pr">$</span> <span class="fn">ls</span> -lh       <span class="cm"># human-readable: 4.0K, 1.2M …</span>
+<span class="pr">$</span> <span class="fn">ls</span> -la       <span class="cm"># long + all hidden files</span>`,
+ hi:"ls -ltr is one of the most-used combos. The newest file is always at the bottom — easy to spot."},
+
+{n:"03",title:"Viewing Files",sub:"cat, head, tail",
+ pts:["<code>cat file</code> — print the entire file to stdout.",
+      "<code>cat -n file</code> — same but with line numbers.",
+      "<code>head -n 20 file</code> — print the first 20 lines. Default is 10.",
+      "<code>tail -n 20 file</code> — print the last 20 lines. Default is 10.",
+      "<code>tail -f file</code> — <strong>follow</strong> the file — stays open and prints new lines as they arrive. Essential for live log watching.",
+      "<code>tail -f -n 100 file</code> — start with last 100 lines, then follow."],
+ code:`<span class="pr">$</span> <span class="fn">cat</span> config.yaml       <span class="cm"># print entire file</span>
+<span class="pr">$</span> <span class="fn">cat</span> -n script.sh     <span class="cm"># with line numbers</span>
+
+<span class="pr">$</span> <span class="fn">head</span> -n 5 data.csv   <span class="cm"># first 5 lines</span>
+<span class="pr">$</span> <span class="fn">tail</span> -n 5 data.csv   <span class="cm"># last 5 lines</span>
+
+<span class="pr">$</span> <span class="fn">tail</span> -f app.log      <span class="cm"># live log feed (Ctrl+C to stop)</span>`,
+ hi:"tail -f is your best friend when debugging a running service. Ctrl+C stops following."},
+
+{n:"04",title:"File Permissions — chmod",sub:"Who can read, write, execute?",
+ pts:["Every file has three permission sets: <strong>u</strong>ser (owner), <strong>g</strong>roup, <strong>o</strong>thers.",
+      "Each set has three bits: <strong>r</strong>ead (4), <strong>w</strong>rite (2), e<strong>x</strong>ecute (1).",
+      "Octal: <code>chmod 755 file</code> → owner=rwx(7), group=r-x(5), others=r-x(5).",
+      "Octal: <code>chmod 644 file</code> → owner=rw-(6), group=r--(4), others=r--(4). Default for files.",
+      "Symbolic: <code>chmod u+x file</code> — add execute for owner only.",
+      "<code>chmod go-w file</code> — remove write from group and others.",
+      "<code>chmod +x file</code> — add execute for everyone."],
+ code:`<span class="pr">$</span> <span class="fn">chmod</span> 755 deploy.sh    <span class="cm"># rwxr-xr-x</span>
+<span class="pr">$</span> <span class="fn">chmod</span> 644 config.cfg  <span class="cm"># rw-r--r--</span>
+<span class="pr">$</span> <span class="fn">chmod</span> 600 id_rsa      <span class="cm"># rw------- (private key!)</span>
+
+<span class="pr">$</span> <span class="fn">chmod</span> u+x script.sh   <span class="cm"># add exec for owner</span>
+<span class="pr">$</span> <span class="fn">chmod</span> go-w secret.txt <span class="cm"># remove write from g+o</span>`,
+ hi:"Memory trick: 4=read, 2=write, 1=exec. 7=all, 6=rw, 5=rx, 4=r. chmod 755 = full owner, read+exec for rest."},
+
+{n:"05",title:"Ownership — chown",sub:"Who owns the file?",
+ pts:["<code>chown user file</code> — change owner of a file.",
+      "<code>chown user:group file</code> — change owner <em>and</em> group in one command.",
+      "<code>chown -R user:group dir/</code> — recursive: change entire directory tree.",
+      "<code>chgrp group file</code> — change group only (without touching owner).",
+      "<code>whoami</code> — print your current username.",
+      "<code>groups</code> — list all groups your user belongs to."],
+ code:`<span class="pr">$</span> <span class="fn">whoami</span>
+alice
+
+<span class="pr">$</span> <span class="fn">chown</span> alice file.txt
+<span class="pr">$</span> <span class="fn">chown</span> alice:devops deploy.sh
+<span class="pr">$</span> <span class="fn">chown</span> -R www-data:www-data /var/www/
+
+<span class="pr">$</span> <span class="fn">chgrp</span> devops config.cfg
+<span class="pr">$</span> <span class="fn">groups</span>
+alice adm sudo docker`,
+ hi:"chown often requires sudo when changing ownership to another user. chown user:group is more concise than running chown + chgrp separately."},
+
+{n:"06",title:"Finding Files — find",sub:"Search the filesystem",
+ pts:["<code>find /path -name \"*.py\"</code> — search by filename glob (case-sensitive).",
+      "<code>find . -iname \"*.py\"</code> — case-<em>in</em>sensitive name match.",
+      "<code>find . -type f</code> — only files; <code>-type d</code> — only directories.",
+      "<code>find . -mtime -7</code> — files modified in the last 7 days.",
+      "<code>find . -size +1M</code> — files larger than 1 MB.",
+      "<code>find . -name \"*.log\" -exec rm {} \\;</code> — find and execute a command on each result."],
+ code:`<span class="pr">$</span> <span class="fn">find</span> . -name <span class="str">"*.py"</span>
+<span class="pr">$</span> <span class="fn">find</span> /var/log -type f -mtime -1  <span class="cm"># modified today</span>
+<span class="pr">$</span> <span class="fn">find</span> . -size +10M -type f
+<span class="pr">$</span> <span class="fn">find</span> . -name <span class="str">"*.tmp"</span> -exec rm {} \;
+
+<span class="cm"># Delete empty directories</span>
+<span class="pr">$</span> <span class="fn">find</span> . -type d -empty -delete`,
+ hi:"find . is recursive by default — it searches the entire subtree. Use -maxdepth 1 to search only the current level."},
+
+{n:"07",title:"Text Search — grep",sub:"Find lines that match a pattern",
+ pts:["<code>grep pattern file</code> — print lines matching a pattern.",
+      "<code>grep -i pattern file</code> — case-insensitive match.",
+      "<code>grep -n pattern file</code> — include line numbers in output.",
+      "<code>grep -v pattern file</code> — <strong>invert</strong>: print lines that do <em>not</em> match.",
+      "<code>grep -r pattern dir/</code> — search recursively in a directory.",
+      "<code>grep -c pattern file</code> — print count of matching lines (not the lines themselves).",
+      "<code>grep -l pattern *.py</code> — list <em>filenames</em> that contain the pattern."],
+ code:`<span class="pr">$</span> <span class="fn">grep</span> <span class="str">"error"</span> app.log
+<span class="pr">$</span> <span class="fn">grep</span> -i <span class="str">"error"</span> app.log     <span class="cm"># ERROR, Error, error …</span>
+<span class="pr">$</span> <span class="fn">grep</span> -n <span class="str">"TODO"</span> *.py         <span class="cm"># show line numbers</span>
+<span class="pr">$</span> <span class="fn">grep</span> -v <span class="str">"DEBUG"</span> app.log     <span class="cm"># skip debug lines</span>
+<span class="pr">$</span> <span class="fn">grep</span> -r <span class="str">"import torch"</span> ./src <span class="cm"># recursive</span>
+<span class="pr">$</span> <span class="fn">grep</span> -c <span class="str">"fail"</span> test.log      <span class="cm"># how many failures?</span>`,
+ hi:"grep -v is incredibly useful for filtering out noise (DEBUG lines, binary files, etc.) in log analysis."},
+
+{n:"08",title:"Advanced grep — -oP and Regex",sub:"Extract exactly what you need",
+ pts:["<code>grep -o pattern file</code> — print <em>only</em> the matching substring, not the whole line.",
+      "<code>grep -P pattern file</code> — use Perl-Compatible RegEx (PCRE): <code>\\d</code>, <code>\\w</code>, lookaheads.",
+      "<code>grep -oP '\\d+'</code> — extract all integers from a file.",
+      "Regex basics: <code>.</code> = any char, <code>*</code> = 0 or more, <code>+</code> = 1 or more, <code>?</code> = optional.",
+      "<code>^</code> = start of line, <code>$</code> = end of line.",
+      "<code>[abc]</code> = character class, <code>[^abc]</code> = NOT those chars.",
+      "<code>\\d</code> = digit, <code>\\w</code> = word char, <code>\\s</code> = whitespace (PCRE)."],
+ code:`<span class="cm"># Extract all IP addresses</span>
+<span class="pr">$</span> <span class="fn">grep</span> -oP <span class="str">'\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}'</span> access.log
+
+<span class="cm"># Extract emails</span>
+<span class="pr">$</span> <span class="fn">grep</span> -oP <span class="str">'\\w+@\\w+\\.\\w+'</span> contacts.txt
+
+<span class="cm"># Lines starting with ERROR</span>
+<span class="pr">$</span> <span class="fn">grep</span> <span class="str">'^ERROR'</span> app.log
+
+<span class="cm"># Lines ending with .py</span>
+<span class="pr">$</span> <span class="fn">grep</span> <span class="str">'\.py$'</span> filelist.txt`,
+ hi:"-oP is one of the most powerful extraction tools: grep -oP '\\d+' pulls every number; combine with sort -u for unique values."},
+
+{n:"09",title:"Environment — env & PATH",sub:"How the shell finds commands",
+ pts:["<code>env</code> — print all current environment variables.",
+      "<code>echo $VAR</code> — print the value of a single variable.",
+      "<code>export VAR=value</code> — set a variable and make it available to child processes.",
+      "<code>PATH</code> — a colon-separated list of directories the shell searches for commands.",
+      "<code>which command</code> — show the full path of a command (e.g. <code>which python3</code>).",
+      "To add a directory: <code>export PATH=$PATH:/opt/mytools</code> — appends to existing PATH.",
+      "Put <code>export</code> lines in <code>~/.bashrc</code> or <code>~/.zshrc</code> to persist them."],
+ code:`<span class="pr">$</span> <span class="fn">env</span> | grep HOME
+HOME=/home/alice
+
+<span class="pr">$</span> <span class="fn">echo</span> $PATH
+/usr/local/bin:/usr/bin:/bin
+
+<span class="pr">$</span> <span class="fn">export</span> MY_API_KEY=<span class="str">"abc123"</span>
+<span class="pr">$</span> <span class="fn">which</span> python3
+/usr/bin/python3
+
+<span class="pr">$</span> <span class="fn">export</span> PATH=$PATH:/opt/cuda/bin`,
+ hi:"Variables set without export are local to the current shell. export makes them visible to any child process (scripts, subshells, programs you run)."},
+
+{n:"10",title:"Arithmetic & Tests — expr, test",sub:"Math and conditionals in the shell",
+ pts:["<code>expr 5 + 3</code> — integer arithmetic. <strong>Spaces around operators are required.</strong>",
+      "<code>expr 10 \\* 3</code> — multiply (escape <code>*</code> to prevent glob expansion).",
+      "<code>$((expression))</code> — modern arithmetic expansion, no spaces needed: <code>echo $((5*3))</code>.",
+      "<code>test -f file</code> — true (exit 0) if the path is a regular file.",
+      "<code>test -d path</code> — true if it's a directory; <code>-e</code> = exists (any type).",
+      "<code>[ \"$a\" -eq \"$b\" ]</code> — numeric comparison. <code>-lt</code> &lt;, <code>-gt</code> &gt;, <code>-ne</code> ≠.",
+      "Exit code <strong>0 = success/true</strong>, any non-zero = failure/false."],
+ code:`<span class="pr">$</span> <span class="fn">expr</span> 7 + 3            <span class="cm"># 10</span>
+<span class="pr">$</span> <span class="fn">expr</span> 10 \* 4          <span class="cm"># 40</span>
+<span class="pr">$</span> echo $(( 2 ** 8 ))   <span class="cm"># 256 (power)</span>
+
+<span class="pr">$</span> <span class="fn">test</span> -f /etc/passwd &amp;&amp; echo <span class="str">"exists"</span>
+<span class="pr">$</span> [ -d /tmp ] &amp;&amp; echo <span class="str">"is a dir"</span>
+
+x=5; [ $x -gt 3 ] &amp;&amp; echo <span class="str">"big"</span>`,
+ hi:"Prefer $((expr)) over expr for arithmetic in modern scripts — it's faster and cleaner. Always quote variables in [ ] to avoid errors on empty strings."},
+
+{n:"11",title:"Bash Loops",sub:"for, while, and iterating over files",
+ pts:["<code>for var in list; do … done</code> — iterate over a space-separated list.",
+      "<code>for f in *.txt; do … done</code> — glob expands to matching files.",
+      "<code>for i in $(seq 1 10); do … done</code> — numeric range (or use <code>{1..10}</code>).",
+      "<code>while [ condition ]; do … done</code> — loop while condition is true.",
+      "<code>while read line; do … done &lt; file</code> — process a file line by line.",
+      "<code>break</code> — exit the loop immediately.",
+      "<code>continue</code> — skip the rest of this iteration, move to next."],
+ code:`<span class="kw">for</span> f in *.log; <span class="kw">do</span>
+  echo <span class="str">"Processing $f"</span>
+  gzip <span class="str">"$f"</span>
+<span class="kw">done</span>
+
+<span class="kw">for</span> i in {1..5}; <span class="kw">do</span> echo <span class="str">"Step $i"</span>; <span class="kw">done</span>
+
+<span class="kw">while</span> <span class="fn">read</span> line; <span class="kw">do</span>
+  echo <span class="str">"Got: $line"</span>
+<span class="kw">done</span> &lt; urls.txt`,
+ hi:"Always quote $f and $line in loops — if a filename contains spaces, an unquoted variable splits into multiple words."},
+
+{n:"12",title:"Pipelines & Putting It Together",sub:"Chain commands for real power",
+ pts:["Pipe <code>|</code> sends stdout of one command to stdin of the next.",
+      "<code>cmd &gt; file</code> — redirect stdout to file (overwrites). <code>&gt;&gt;</code> appends.",
+      "<code>cmd 2&gt; err.log</code> — redirect stderr. <code>2&gt;&amp;1</code> merges stderr into stdout.",
+      "<code>xargs</code> — turns stdin lines into arguments: <code>find . -name '*.py' | xargs wc -l</code>.",
+      "<code>tee</code> — write to file <em>and</em> also pass through to stdout.",
+      "Combine everything: <code>find . -name '*.log' | xargs grep -l 'ERROR' | xargs tail -n 5</code>"],
+ code:`<span class="cm"># Most recent errors in any log</span>
+<span class="pr">$</span> <span class="fn">grep</span> -r <span class="str">"ERROR"</span> ./logs | <span class="fn">tail</span> -20
+
+<span class="cm"># Count Python files by directory</span>
+<span class="pr">$</span> <span class="fn">find</span> . -name <span class="str">"*.py"</span> | xargs wc -l | sort -n
+
+<span class="cm"># Watch and save log simultaneously</span>
+<span class="pr">$</span> ./server | <span class="fn">tee</span> server.log
+
+<span class="cm"># Capture both stdout and stderr</span>
+<span class="pr">$</span> make build &gt; build.log 2&gt;&amp;1`,
+ hi:"Mastering pipes turns 10-step workflows into one-liners. Think of the shell as a data pipeline: each command transforms and passes data along."},
+];
+
+// ── QUESTION DATA ───────────────────────────────────────────────────────────
+const QS = [
+// --- Navigation ---
+{t:"Navigation",
+ q:"What does the pwd command do?",
+ opts:["Prints working directory path","Switches to the parent directory","Lists directory contents","Prints all defined variables"],
+ a:0, ex:"pwd = Print Working Directory. It shows your current absolute path, like /home/alice/projects. Essential when you're lost in a deep directory tree."},
+{t:"Navigation",
+ q:"You're in /home/alice/src. What does 'cd -' do?",
+ opts:["Goes to /home/alice","Goes to root /","Returns to the previous directory","Does nothing"],
+ a:2, ex:"cd - toggles back to the directory you were in before the last cd. It's the fastest way to bounce between two locations without retyping paths."},
+{t:"Navigation",
+ q:"How do you go up two directory levels from /home/alice/projects/src?",
+ opts:["cd ~","cd 2..","cd ../..","cd up up"],
+ a:2, ex:".. means 'parent directory'. cd ../.. chains two parent jumps: src → projects → alice. You can chain as many as needed."},
+{t:"Navigation",
+ q:"You're deep in a directory. Which command jumps to your home directory instantly?",
+ opts:["cd /","cd home","cd ~","cd .."],
+ a:2, ex:"cd ~ (or just cd with no arguments) always takes you home, regardless of where you are. ~ expands to $HOME."},
+{t:"Navigation",
+ q:"ls shows files/dirs in the current directory. What does 'ls /etc' do?",
+ opts:["Lists the current directory","Lists /etc without changing to it","Changes to /etc and lists it","Shows only hidden files in /etc"],
+ a:1, ex:"You can pass any path to ls. ls /etc lists /etc's contents while keeping your current directory unchanged — no cd required."},
+
+// --- ls options ---
+{t:"ls Options",
+ q:"What does ls -ltr display, and why is it useful?",
+ opts:["Long format sorted by name reversed","Long format sorted by size","Long format sorted by time, oldest first (newest at bottom)","Short format showing only timestamps"],
+ a:2, ex:"ls -ltr: -l = long format, -t = sort by modification time (newest first), -r = reverse. Combined: oldest at top, newest at bottom. Scan the bottom to see what just changed."},
+{t:"ls Options",
+ q:"In the output of ls -l, what do the first 10 characters represent?",
+ opts:["File size and owner","The full path and filename","File type and permissions (rwxrwxrwx)","Date and time of creation"],
+ a:2, ex:"Example: -rw-r--r-- The first char is type (- = file, d = dir, l = symlink). The next 9 are 3 sets of rwx: owner, group, others."},
+{t:"ls Options",
+ q:"Which flag shows hidden files (dotfiles like .bashrc)?",
+ opts:["ls -h","ls -a","ls -l","ls -d"],
+ a:1, ex:"ls -a shows ALL files including those whose names start with a dot (.). ls -A is similar but excludes . and .. (the current and parent directory entries)."},
+{t:"ls Options",
+ q:"How do you list files with human-readable sizes (KB, MB) instead of raw bytes?",
+ opts:["ls -s","ls -b","ls -lh","ls -lr"],
+ a:2, ex:"ls -lh adds the -h (human-readable) flag to -l output. Sizes show as 4.0K, 1.2M, 3.4G instead of 4096 bytes."},
+{t:"ls Options",
+ q:"What does the 'd' at the start of a line in ls -l output mean?",
+ opts:["The file is deleted","It is a device file","It is a directory","It is a dynamic library"],
+ a:2, ex:"The first character of the permissions column is the file type: d = directory, - = regular file, l = symlink, b = block device, c = character device."},
+
+// --- cat, head, tail ---
+{t:"cat / head / tail",
+ q:"How do you print the last 50 lines of a log file?",
+ opts:["head -n 50 app.log","cat -n 50 app.log","tail -50 app.log","tail -n 50 app.log"],
+ a:3, ex:"tail -n 50 prints the last 50 lines. Both tail -50 and tail -n 50 work in most systems, but -n is the standard POSIX form."},
+{t:"cat / head / tail",
+ q:"What does 'tail -f app.log' do differently from 'tail app.log'?",
+ opts:["Shows the first lines instead of last","Filters for errors only","Stays open and prints new lines as they appear","Follows symbolic links"],
+ a:2, ex:"tail -f (follow) watches the file and prints any new content as it's written. Essential for monitoring live logs. Press Ctrl+C to stop."},
+{t:"cat / head / tail",
+ q:"How do you view the first 5 lines of a CSV file?",
+ opts:["cat -5 data.csv","head -5 data.csv","head -n 5 data.csv","top -n 5 data.csv"],
+ a:2, ex:"head -n 5 prints the first 5 lines. head without -n defaults to 10 lines. Equivalent: head -5 works in most systems but -n 5 is standard."},
+{t:"cat / head / tail",
+ q:"cat -n file vs cat file — what does -n add?",
+ opts:["Prints in reverse order","Shows non-printing characters","Adds line numbers to each line","Suppresses blank lines"],
+ a:2, ex:"cat -n prefixes every output line with its line number. Useful for referencing specific lines when debugging or discussing code."},
+{t:"cat / head / tail",
+ q:"You want to see the last 100 lines of a file AND keep watching for new lines. Which command?",
+ opts:["tail -f app.log","tail -n 100 app.log","tail -f -n 100 app.log","cat -f app.log"],
+ a:2, ex:"tail -f -n 100 combines: start from the last 100 lines (-n 100) and then follow (-f). Perfect for starting a live-tail session with context."},
+
+// --- chmod ---
+{t:"chmod",
+ q:"chmod 755 file gives the owner which permissions?",
+ opts:["Read only (4)","Read and write (6)","Read, write, execute (7)","Write and execute (3)"],
+ a:2, ex:"7 = 4+2+1 = r+w+x. The three digits in 755 apply to: owner(7=rwx), group(5=r-x), others(5=r-x). A typical permission for executables and directories."},
+{t:"chmod",
+ q:"What is the octal value for rw-r--r-- (typical for text files)?",
+ opts:["777","755","644","600"],
+ a:2, ex:"rw- = 4+2+0 = 6, r-- = 4+0+0 = 4, r-- = 4. So 644. The owner can read and write; group and others can only read."},
+{t:"chmod",
+ q:"What does 'chmod u+x deploy.sh' do?",
+ opts:["Adds execute permission for all users","Adds execute permission for the owner only","Removes execute for the owner","Changes the owner to u"],
+ a:1, ex:"u = user (owner), + = add, x = execute. So: add execute permission for the file owner. chmod a+x would add it for everyone (a = all)."},
+{t:"chmod",
+ q:"Your private SSH key should be 600. What does 600 mean?",
+ opts:["rwxrwxrwx","rw-r--r--","rw-------","r--------"],
+ a:2, ex:"600 = rw------- : owner has read+write, nobody else has any access. SSH clients refuse to use keys with wider permissions (too permissive = security risk)."},
+{t:"chmod",
+ q:"chmod go-w config.cfg removes write permission from whom?",
+ opts:["Owner only","Group and others","Owner and group","Everyone"],
+ a:1, ex:"g = group, o = others, - = remove, w = write. So it strips the write bit from both group and others, without touching the owner's permissions."},
+
+// --- chown ---
+{t:"chown",
+ q:"How do you change both owner and group of a file in one command?",
+ opts:["chown user file && chgrp group file","chown user file","chown user:group file","setowner user group file"],
+ a:2, ex:"chown user:group file sets both at once. The colon separates user and group. If you omit :group, only the owner changes. Requires root/sudo for changing to another user."},
+{t:"chown",
+ q:"You want to recursively change ownership of /var/app/ to user 'deploy'. The command is:",
+ opts:["chown deploy /var/app","chown -r deploy /var/app","chown -R deploy /var/app","chmod -R deploy /var/app"],
+ a:2, ex:"chown -R (capital R) recursively applies to the directory and all its contents. Lowercase -r doesn't exist for chown; the flag is -R."},
+{t:"chown",
+ q:"What does 'whoami' return?",
+ opts:["Your system hostname","Your current username","Your home directory path","Your user ID number"],
+ a:1, ex:"whoami prints the username of the current user. Useful in scripts to check who is running them, or to verify you're not accidentally running as root."},
+
+// --- find ---
+{t:"find",
+ q:"How do you find all Python files under the current directory?",
+ opts:["ls -r *.py","grep -r '.py' .","find . -name '*.py'","find . -type py"],
+ a:2, ex:"find . starts searching from the current directory recursively. -name '*.py' matches filenames ending in .py. The glob is single-quoted to prevent shell expansion."},
+{t:"find",
+ q:"What does 'find . -type d' return?",
+ opts:["All deleted files","All regular files","All directories","All device files"],
+ a:2, ex:"-type d matches directories only. -type f matches regular files, -type l matches symbolic links. Combine with -name to narrow further."},
+{t:"find",
+ q:"find . -mtime -7 matches files modified:",
+ opts:["Exactly 7 days ago","More than 7 days ago","In the last 7 days","Files larger than 7 MB"],
+ a:2, ex:"In find, - before a number means 'less than'. -mtime -7 = modified less than 7 days ago (i.e., within the last week). +7 means 'older than 7 days'."},
+{t:"find",
+ q:"What does -exec rm {} \\; do in a find command?",
+ opts:["Runs rm on every found file","Executes rm only on the first match","Moves files to /tmp","Prints the command without running it"],
+ a:0, ex:"{} is a placeholder for the current filename; \\; terminates the -exec expression. So find . -name '*.tmp' -exec rm {} \\; deletes every .tmp file found."},
+{t:"find",
+ q:"How do you find files larger than 100 MB?",
+ opts:["find . -size 100MB","find . -size +100M","find . -mtime +100","find . -large 100M"],
+ a:1, ex:"find uses +N for 'greater than N', -N for 'less than N'. Size units: c=bytes, k=KB, M=MB, G=GB. +100M = strictly larger than 100 megabytes."},
+
+// --- grep ---
+{t:"grep",
+ q:"grep -v 'DEBUG' app.log outputs:",
+ opts:["Only lines matching DEBUG","A count of DEBUG lines","All lines EXCEPT those containing DEBUG","Lines before each DEBUG match"],
+ a:2, ex:"-v inverts the match — it prints lines that do NOT match the pattern. grep -v is great for filtering noise: grep -v DEBUG keeps only non-debug log lines."},
+{t:"grep",
+ q:"How do you search for 'error' case-insensitively in a log file?",
+ opts:["grep -c error app.log","grep -i error app.log","grep -r error app.log","grep -I error app.log"],
+ a:1, ex:"-i makes the match case-insensitive, so it will match 'error', 'Error', 'ERROR', 'ErRoR', etc. -I is different — it skips binary files."},
+{t:"grep",
+ q:"grep -c 'fail' test.log returns:",
+ opts:["The matching lines","The filenames containing the pattern","A single count of how many lines matched","The character positions of matches"],
+ a:2, ex:"-c (count) prints just the number of matching lines, not the lines themselves. Useful for quick metrics: grep -c ERROR app.log gives you the error count."},
+{t:"grep",
+ q:"How do you recursively search for 'import os' in all .py files under ./src?",
+ opts:["grep 'import os' ./src","grep -n 'import os' *.py","grep -r 'import os' ./src","find ./src | grep 'import os'"],
+ a:2, ex:"-r makes grep search all files in a directory recursively. You can combine with --include: grep -r 'import os' ./src --include='*.py' to restrict to Python files only."},
+{t:"grep",
+ q:"grep -l 'TODO' *.py does what?",
+ opts:["Lists TODO items with line numbers","Prints lines containing TODO","Lists only the filenames that contain TODO","Counts TODOs per file"],
+ a:2, ex:"-l (lowercase L) prints only the filename of each file that has at least one match — not the matching lines. Perfect when you want the list of files to edit."},
+{t:"grep",
+ q:"grep -n 'ERROR' app.log adds what to the output?",
+ opts:["File size","Line numbers before each matching line","Count of matches","Timestamp of each match"],
+ a:1, ex:"-n prefixes each output line with its line number in the file. So you might see: 42:ERROR: database connection failed — letting you jump directly to line 42."},
+
+// --- grep -oP / regex ---
+{t:"grep -oP / Regex",
+ q:"What does grep -o 'pattern' file do differently from grep 'pattern' file?",
+ opts:["Searches in reverse order","Prints only the matched substring, not the whole line","Makes the match case-insensitive","Counts matched occurrences"],
+ a:1, ex:"-o (only) restricts output to only the part of the line that matched the pattern, rather than printing the entire matching line. Key for extraction tasks."},
+{t:"grep -oP / Regex",
+ q:"grep -P enables which type of regular expressions?",
+ opts:["POSIX Basic Regex","Extended Regex (ERE)","Perl-Compatible Regex (PCRE)","Python-style regex"],
+ a:2, ex:"-P uses PCRE (Perl-Compatible Regular Expressions), which adds \\d, \\w, \\s, lookaheads/lookbehinds, and non-greedy quantifiers — features not in basic grep regex."},
+{t:"grep -oP / Regex",
+ q:"grep -oP '\\d+' numbers.txt extracts:",
+ opts:["Lines containing digits","The first digit on each line","Every sequence of one or more digits","Floating point numbers only"],
+ a:2, ex:"\\d+ (PCRE) matches one or more digit characters. -o prints each match separately, one per line. Combined: extracts every integer sequence in the file, each on its own line."},
+{t:"grep -oP / Regex",
+ q:"In a regex, what does ^ mean?",
+ opts:["Match any character","End of line","Start of line","Negate the pattern"],
+ a:2, ex:"^ anchors the match to the start of the line. grep '^ERROR' only matches lines where ERROR appears at the very beginning. Inside a character class [^abc], ^ means 'not these characters'."},
+{t:"grep -oP / Regex",
+ q:"What is the difference between * and + in regex?",
+ opts:["* matches letters; + matches digits","* means zero or more; + means one or more","* is greedy; + is lazy","No difference"],
+ a:1, ex:"* = zero or more occurrences (can match nothing). + = one or more (requires at least one). So 'ab*' matches 'a', 'ab', 'abb'…; 'ab+' requires at least one 'b'."},
+{t:"grep -oP / Regex",
+ q:"What does the regex pattern '\\.py$' match?",
+ opts:["Any line containing py","Lines ending with .py","Lines containing a dot followed by py","Lines starting with .py"],
+ a:1, ex:"\\. escapes the dot (matches a literal dot, not any char). py$ matches 'py' at the end of line. Together: matches strings ending in '.py' — exactly what you want for Python filenames."},
+
+// --- env / PATH ---
+{t:"env / PATH",
+ q:"What does 'export MY_VAR=hello' do differently from 'MY_VAR=hello'?",
+ opts:["Both are identical","export makes it available to child processes; without export it's local only","export makes it permanent across reboots","Only export works in bash"],
+ a:1, ex:"Without export, the variable is local to the current shell session. With export, it's added to the environment of any subprocess (scripts, programs) you run from this shell."},
+{t:"env / PATH",
+ q:"What is $PATH?",
+ opts:["Your current working directory","A colon-separated list of directories searched for commands","Your home directory","The path to the current script"],
+ a:1, ex:"When you type 'python3', the shell searches each directory in $PATH left-to-right until it finds an executable named python3. which python3 shows which directory 'won'."},
+{t:"env / PATH",
+ q:"How do you add /opt/mytools to your PATH without removing existing entries?",
+ opts:["PATH=/opt/mytools","export PATH=/opt/mytools","export PATH=$PATH:/opt/mytools","set PATH=/opt/mytools"],
+ a:2, ex:"$PATH includes the existing value. Appending :/opt/mytools adds the new directory at the end. Prepending /opt/mytools:$PATH adds it first (higher priority). Never overwrite $PATH entirely or system commands break."},
+{t:"env / PATH",
+ q:"env | grep HOME does what?",
+ opts:["Sets the HOME variable","Prints all env vars, then filters lines containing HOME","Removes the HOME variable","Creates a new env var called grep"],
+ a:1, ex:"env prints all environment variables. | pipes the output to grep, which filters for lines containing 'HOME'. Result: HOME=/home/alice (and any other vars with HOME in the name)."},
+{t:"env / PATH",
+ q:"'which python3' returns:",
+ opts:["The Python version","The Python documentation path","The full filesystem path to the python3 executable","A list of all installed Python versions"],
+ a:2, ex:"which searches $PATH and prints the full path of the first matching executable. If python3 isn't found in PATH, it prints nothing (or an error). Useful for confirming which python you're using."},
+
+// --- expr / test ---
+{t:"expr / test",
+ q:"What is the output of: expr 7 + 3",
+ opts:["7+3","10","7 + 3","\"10\""],
+ a:1, ex:"expr evaluates integer arithmetic and prints the result. Spaces around operators are required — expr 7+3 (no spaces) would print '7+3' as a string, not 10."},
+{t:"expr / test",
+ q:"Why must you write 'expr 10 \\* 4' instead of 'expr 10 * 4'?",
+ opts:["* is a reserved keyword in expr","The shell expands * as a glob before expr sees it","expr requires backslash before all operators","* means exponent in expr"],
+ a:1, ex:"The shell processes * as a filename glob before passing arguments to expr. If files exist, * expands to their names. Escaping it with \\* (or quoting '*') passes a literal asterisk to expr."},
+{t:"expr / test",
+ q:"echo $((2 ** 10)) outputs:",
+ opts:["210","20","1024","Error — ** not supported"],
+ a:2, ex:"$(( )) is bash arithmetic expansion. ** is the power operator. 2**10 = 1024. This is faster and cleaner than expr for math in scripts."},
+{t:"expr / test",
+ q:"test -f /etc/passwd returns exit code 0 when:",
+ opts:["The file does not exist","/etc/passwd is a directory","/etc/passwd exists and is a regular file","The user has permission to read it"],
+ a:2, ex:"-f tests: does this path exist AND is it a regular file (not a directory or symlink). Exit code 0 = true. Used in scripts: test -f config.yml && echo 'config found'"},
+{t:"expr / test",
+ q:"In [ \"$x\" -eq 5 ], what does -eq mean?",
+ opts:["String equality (like ==)","Numeric less than or equal","Numeric equality (integers only)","File is executable"],
+ a:2, ex:"-eq is numeric equality for integers. String comparison uses = or ==. Other numeric operators: -lt (<), -gt (>), -le (≤), -ge (≥), -ne (≠)."},
+{t:"expr / test",
+ q:"What does exit code 0 mean in Unix?",
+ opts:["The command failed","The command had no output","The command succeeded (true)","The command was not found"],
+ a:2, ex:"Unix convention: exit 0 = success/true, any non-zero = failure/false. test and [ ] return 0 if the condition is true. This is why && (run if previous succeeded) and || (run if failed) work."},
+{t:"expr / test",
+ q:"[[ -z \"$str\" ]] evaluates to true when:",
+ opts:["$str is a non-empty string","$str is zero","$str is an empty string","$str is a file that is zero bytes"],
+ a:2, ex:"-z tests for zero-length string (empty). -n tests for non-empty string. Always use [[ ]] (double brackets) in bash for string tests — it's safer than [ ] with tricky values."},
+
+// --- Bash Loops ---
+{t:"Bash Loops",
+ q:"for f in *.log; do gzip \"$f\"; done — what does this do?",
+ opts:["Removes all .log files","Unzips all .log files","Compresses every .log file in current directory","Prints .log filenames"],
+ a:2, ex:"The glob *.log expands to all .log files. The loop assigns each to $f and runs gzip on it. Quoting \"$f\" is essential to handle filenames with spaces correctly."},
+{t:"Bash Loops",
+ q:"How do you loop from 1 to 10 in bash using brace expansion?",
+ opts:["for i in [1-10]","for i in seq(1,10)","for i in {1..10}","for i from 1 to 10"],
+ a:2, ex:"{1..10} is bash brace expansion — it expands to '1 2 3 4 5 6 7 8 9 10'. Cleaner than $(seq 1 10). For step: {0..20..2} gives even numbers."},
+{t:"Bash Loops",
+ q:"while read line; do echo \"$line\"; done < urls.txt — what does this do?",
+ opts:["Writes lines to urls.txt","Reads and prints each line from urls.txt","Loops while urls.txt exists","Runs echo on every command in PATH"],
+ a:1, ex:"< urls.txt redirects the file as stdin to the while loop. read line reads one line at a time. This is the standard pattern for processing a file line by line in bash."},
+{t:"Bash Loops",
+ q:"What does 'continue' do inside a bash loop?",
+ opts:["Exits the entire script","Ends the loop and runs the next command after done","Skips the rest of the current iteration and moves to the next","Pauses until user presses Enter"],
+ a:2, ex:"continue skips everything after it in the current iteration and goes back to the top of the loop. break exits the loop entirely. Think of continue as 'skip this one, keep going'."},
+{t:"Bash Loops",
+ q:"How do you iterate over the output of a command in a for loop?",
+ opts:["for x in [command]","for x in {command}","for x in $(command)","for x from command"],
+ a:2, ex:"$(command) runs the command and substitutes its output as words. Example: for f in $(find . -name '*.py'); do … done. Caution: use while read instead if filenames might contain spaces."},
+{t:"Bash Loops",
+ q:"A while loop with 'while true; do ...; done' runs:",
+ opts:["Exactly once","Until the user logs out","Forever, until broken with break or Ctrl+C","10 times by default"],
+ a:2, ex:"'true' is a command that always returns exit code 0 (success), so the condition is always met. This creates an infinite loop. You need break, Ctrl+C, or a kill signal to stop it."},
+];
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let slideIdx = 0;
+let qIdx = 0, score = 0, combo = 0, bestCombo = 0;
+let timerVal = 20, timerIv = null, qStart = 0;
+let timings = [], wrongs = [];
+const TIMER_MAX = 20;
+const READ_TIME = 15;
+const CIRCUMFERENCE = 2 * Math.PI * 22;
+
+// ── SCREENS ─────────────────────────────────────────────────────────────────
+function show(id) {
+  ['intro','slides','game','end'].forEach(x => {
+    document.getElementById(x).hidden = (x !== id);
+  });
+}
+
+function startSlides() { renderSlide(0); show('slides'); }
+function skipToGame()  { startGame(); show('game'); }
+function reviewSlides(){ renderSlide(0); show('slides'); }
+function restartGame() { startGame(); show('game'); }
+
+// ── SLIDES ───────────────────────────────────────────────────────────────────
+function renderSlide(i) {
+  slideIdx = i;
+  const s = SLIDES[i];
+  const body = document.getElementById('sl-body');
+  body.innerHTML = `
+    <div class="sl-chip">Slide ${s.n} / ${SLIDES.length}</div>
+    <h2 class="sl-title">${s.title}</h2>
+    <p class="sl-sub">${s.sub}</p>
+    <div class="sl-grid">
+      <div class="sl-pts">${s.pts.map((p,j)=>`<div class="sl-pt"><div class="sl-pt-n">${j+1}</div><span>${p}</span></div>`).join('')}
+      ${s.hi ? `<div class="hi">${s.hi}</div>` : ''}
+      </div>
+      <pre class="cb">${s.code}</pre>
+    </div>`;
+
+  const dots = document.getElementById('sl-dots');
+  dots.innerHTML = SLIDES.map((_,j)=>`<div class="sl-dot ${j===i?'active':j<i?'done':''}"></div>`).join('');
+
+  document.getElementById('sl-ctr').textContent = `${i+1} / ${SLIDES.length}`;
+  document.getElementById('btn-prev').disabled = (i === 0);
+  const btnNext = document.getElementById('btn-next');
+  if (i === SLIDES.length - 1) {
+    btnNext.textContent = 'Start Game ▶';
+    btnNext.onclick = () => { startGame(); show('game'); };
+  } else {
+    btnNext.textContent = 'Next →';
+    btnNext.onclick = nextSlide;
+  }
+}
+
+function nextSlide() { if (slideIdx < SLIDES.length-1) renderSlide(slideIdx+1); }
+function prevSlide() { if (slideIdx > 0) renderSlide(slideIdx-1); }
+
+// ── GAME ─────────────────────────────────────────────────────────────────────
+function startGame() {
+  qIdx = 0; score = 0; combo = 0; bestCombo = 0;
+  timings = []; wrongs = [];
+  updateScore(); updateCombo();
+  renderQ(0);
+}
+
+function renderQ(i) {
+  clearInterval(timerIv);
+  const q = QS[i];
+
+  document.getElementById('g-topic').textContent = q.t;
+  document.getElementById('g-qlbl').textContent = `Q ${i+1} / ${QS.length}`;
+  document.getElementById('q-chip').textContent = q.t;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('prog').style.width = `${(i/QS.length)*100}%`;
+
+  const codeEl = document.getElementById('q-code');
+  if (q.code) { codeEl.textContent = q.code; codeEl.style.display='block'; }
+  else { codeEl.style.display='none'; }
+
+  document.getElementById('expl').className = 'expl';
+  document.getElementById('expl').innerHTML = '';
+  document.getElementById('next-row').style.display = 'none';
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = q.opts.map((o,j)=>`
+    <button class="opt" onclick="answer(${j})" data-idx="${j}">
+      <span class="o-ltr">${'ABCD'[j]}</span>${o}
+    </button>`).join('');
+
+  const card = document.getElementById('q-card');
+  card.classList.remove('anim');
+  void card.offsetWidth;
+  card.classList.add('anim');
+
+  startReading();
+}
+
+function setOptsDisabled(disabled) {
+  document.querySelectorAll('.opt').forEach(b => b.disabled = disabled);
+}
+
+function startReading() {
+  document.getElementById('btn-finish-read').style.display = '';
+  document.getElementById('btn-skip').style.display = 'none';
+  setOptsDisabled(true);
+  let readVal = READ_TIME;
+  updateReadingUI(readVal);
+  timerIv = setInterval(() => {
+    readVal--;
+    if (readVal <= 0) {
+      clearInterval(timerIv);
+      setOptsDisabled(false);
+      startTimer();
+    } else {
+      updateReadingUI(readVal);
+    }
+  }, 1000);
+}
+
+function updateReadingUI(v) {
+  document.getElementById('t-txt').textContent = '📖';
+  const fill = document.getElementById('t-fill');
+  const offset = CIRCUMFERENCE * (1 - v / READ_TIME);
+  fill.style.strokeDashoffset = offset;
+  fill.className = 't-fill read';
+}
+
+function startTimer() {
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = '';
+  timerVal = TIMER_MAX;
+  qStart = Date.now();
+  updateTimerUI(TIMER_MAX);
+  timerIv = setInterval(() => {
+    timerVal--;
+    updateTimerUI(timerVal);
+    if (timerVal <= 0) { clearInterval(timerIv); timeUp(); }
+  }, 1000);
+}
+
+function updateTimerUI(v) {
+  document.getElementById('t-txt').textContent = v;
+  const fill = document.getElementById('t-fill');
+  const offset = CIRCUMFERENCE * (1 - v / TIMER_MAX);
+  fill.style.strokeDashoffset = offset;
+  fill.className = 't-fill' + (v <= 5 ? ' danger' : v <= 10 ? ' warn' : '');
+}
+
+function timeUp() {
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = 'none';
+  const elapsed = TIMER_MAX;
+  timings.push(elapsed);
+  const q = QS[qIdx];
+  wrongs.push({idx: qIdx, q: q.q, correct: q.opts[q.a], chose: 'Timed out'});
+  combo = 0; updateCombo();
+  markOptions(q.a, -1);
+  showExpl(q.ex);
+}
+
+function finishedReading() {
+  clearInterval(timerIv);
+  setOptsDisabled(false);
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = '';
+  startTimer();
+}
+
+function skipQuestion() {
+  clearInterval(timerIv);
+  timeUp();
+}
+
+function answer(chosen) {
+  clearInterval(timerIv);
+  const elapsed = (Date.now() - qStart) / 1000;
+  timings.push(Math.min(elapsed, TIMER_MAX));
+  const q = QS[qIdx];
+  const correct = chosen === q.a;
+
+  if (correct) {
+    const pts = Math.max(10, Math.floor(100 - elapsed * 4));
+    let mult = combo >= 5 ? 1.5 : combo >= 3 ? 1.25 : 1;
+    const earned = Math.round(pts * mult);
+    score += earned;
+    combo++;
+    if (combo > bestCombo) bestCombo = combo;
+    showPopup(`+${earned}${mult > 1 ? ' ×'+mult : ''}`);
+  } else {
+    wrongs.push({idx: qIdx, q: q.q, correct: q.opts[q.a], chose: q.opts[chosen]});
+    combo = 0;
+  }
+  updateScore(); updateCombo();
+  markOptions(q.a, chosen);
+  showExpl(q.ex);
+}
+
+function markOptions(correctIdx, chosenIdx) {
+  document.getElementById('btn-finish-read').style.display = 'none';
+  document.getElementById('btn-skip').style.display = 'none';
+  document.querySelectorAll('.opt').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correctIdx) btn.classList.add('correct');
+    else if (i === chosenIdx) btn.classList.add('wrong');
+  });
+  const nr = document.getElementById('next-row');
+  nr.style.display = 'flex';
+  const remaining = QS.length - qIdx - 1;
+  document.getElementById('q-ctr').textContent =
+    remaining > 0 ? `${remaining} question${remaining>1?'s':''} remaining` : 'Last question!';
+}
+
+function showExpl(text) {
+  const el = document.getElementById('expl');
+  el.innerHTML = `<strong>Explanation:</strong> ${text}`;
+  el.classList.add('show');
+}
+
+function nextQ() {
+  qIdx++;
+  if (qIdx >= QS.length) { endGame(); return; }
+  renderQ(qIdx);
+}
+
+function updateScore() { document.getElementById('g-score').textContent = score; }
+function updateCombo() {
+  const box = document.getElementById('g-cbox');
+  document.getElementById('g-combo').textContent = `×${combo >= 5 ? 1.5 : combo >= 3 ? 1.25 : 1}`;
+  box.classList.toggle('hot', combo >= 3);
+}
+
+function showPopup(msg) {
+  const pp = document.getElementById('pp');
+  pp.textContent = msg;
+  pp.classList.add('show');
+  setTimeout(() => pp.classList.remove('show'), 1400);
+}
+
+// ── END SCREEN ───────────────────────────────────────────────────────────────
+function endGame() {
+  clearInterval(timerIv);
+  const total = QS.length;
+  const correct = total - wrongs.length;
+  const acc = Math.round((correct / total) * 100);
+  const avgTime = timings.length ? (timings.reduce((a,b)=>a+b,0)/timings.length).toFixed(1) : 0;
+
+  document.getElementById('end-score').textContent = score;
+  document.getElementById('r-correct').textContent = `${correct}/${total}`;
+  document.getElementById('r-acc').textContent = `${acc}%`;
+  document.getElementById('r-combo').textContent = `×${bestCombo >= 5 ? 1.5 : bestCombo >= 3 ? 1.25 : 1} (${bestCombo})`;
+  document.getElementById('r-speed').textContent = `${avgTime}s`;
+
+  const trophy = score >= 4000 ? '🏆' : score >= 2800 ? '🥇' : score >= 1800 ? '🥈' : '🥉';
+  const rankCls = score >= 4000 ? 'rank-s' : score >= 2800 ? 'rank-a' : score >= 1800 ? 'rank-b' : 'rank-c';
+  const rankTxt = score >= 4000 ? 'S Rank — Shell Sensei!' : score >= 2800 ? 'A Rank — Terminal Master' : score >= 1800 ? 'B Rank — Practitioner' : 'C Rank — Keep Training';
+  document.getElementById('end-trophy').textContent = trophy;
+  document.getElementById('end-ttl').textContent = score >= 4000 ? 'Legendary!' : score >= 2800 ? 'Excellent!' : 'Dojo Complete!';
+  const rankEl = document.getElementById('end-rank');
+  rankEl.textContent = rankTxt;
+  rankEl.className = `rank ${rankCls}`;
+
+  const wrap = document.getElementById('missed-wrap');
+  if (wrongs.length === 0) {
+    wrap.innerHTML = '<div style="color:#56d364;text-align:center;margin-bottom:16px;font-size:1rem;">🎯 Perfect score! All correct!</div>';
+  } else {
+    wrap.innerHTML = `<div style="color:#a8c8a8;font-size:.82rem;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Missed (${wrongs.length})</div>` +
+      wrongs.slice(0,8).map(w=>`<div class="mi"><strong>${w.q}</strong>You chose: ${w.chose}<div class="mi-ans">✓ ${w.correct}</div></div>`).join('') +
+      (wrongs.length > 8 ? `<div style="color:#a8c8a8;font-size:.82rem;text-align:center;">…and ${wrongs.length-8} more</div>` : '');
+  }
+
+  show('end');
+}
+</script>
+</body>
+</html>
