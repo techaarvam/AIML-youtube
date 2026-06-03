@@ -490,17 +490,6 @@ const MODELS = [
     seqLen: 255,
     svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
   },
-  {
-    id:            'btm_d1024',
-    name:          'BTM d1024 · Run 4',
-    desc:          'OpenWebText · 127M params · GPT-2 BPE · progressive expansion · loss 5.09',
-    onnx:          `${RELEASE}/btm_d1024.onnx`,
-    vocab:         null,     // GPT-2 BPE — tokenized client-side via js-tiktoken
-    seqLen:        255,
-    svgs:          ['run5_progressive.svg'],
-    tiktoken:      'gpt2',
-    predictTokens: 2,        // 127M WASM is slower — 2 tokens keeps it responsive
-  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
