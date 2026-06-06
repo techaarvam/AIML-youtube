@@ -179,14 +179,15 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
   flex-wrap: wrap;
 }
 #lineage-svgs img {
-  flex: 1 1 0;
+  flex: 0 1 360px;
   min-width: 0;
-  max-width: 100%;
+  max-width: 360px;
   height: auto;
   border: 1px solid #dde6f0;
   border-radius: 6px;
   background: #fff;
 }
+@media (max-width: 680px) { #lineage-svgs img { max-width: 100%; flex-basis: 100%; } }
 
 /* ── Build contrast ── */
 #contrast { margin-top: 20px; }
@@ -549,7 +550,7 @@ const MODELS = [
     onnx:   `${RELEASE}/model_server_w128.onnx`,
     vocab:  `${RELEASE}/vocab_server.json`,
     seqLen: 127,
-    svgs:   ['wiki_server_w128.svg'],
+    svgs:   ['btm_lineage_out1.svg', 'wiki_server_w128.svg'],   // common WikiText start + BTM, then the server continuation
   },
 
   // Hidden 2026-06-05 — page repositioned around Run 3 + the new GPT-2 / d1024
@@ -590,6 +591,7 @@ const loadState         = new Array(MODELS.length).fill('idle');
 const debounces         = new Array(MODELS.length).fill(null);
 const modelVocabs       = new Array(MODELS.length).fill(null); // {reverseVocab, vocabSize, unkIdx}
 const pendingPrediction = new Array(MODELS.length).fill('');
+const runSeq            = new Array(MODELS.length).fill(0);  // per-panel generation id (streaming cancel)
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
 function getCookie(name) {
@@ -622,6 +624,7 @@ function buildPanels() {
   MODELS.forEach((m, idx) => {
     const panel = document.createElement('div');
     panel.className = 'panel';
+    panel.id = `panel${idx}`;
     panel.innerHTML = `
       <div class="panel-header">
         <div class="dot" id="dot${idx}"></div>
@@ -641,7 +644,6 @@ function buildPanels() {
         </div>
       </div>
       <button class="accept-btn" id="acc${idx}" hidden>accept prediction ⇥</button>
-      <button class="load-btn" id="loadbtn${idx}" hidden>Load model (~300 MB)</button>
       <div class="panel-status" id="st${idx}">click to load model</div>
     `;
     grid.appendChild(panel);
@@ -660,10 +662,6 @@ function buildPanels() {
       }
     });
     document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
-    document.getElementById(`loadbtn${idx}`).addEventListener('click', () => {
-      document.getElementById(`loadbtn${idx}`).hidden = true;
-      loadModel(idx);
-    });
     ta.addEventListener('input', () => {
       autoExpand(ta, ghost);
       clearGhost(idx, ta.value);
@@ -755,6 +753,7 @@ async function loadModel(idx) {
 
 // ── Inference ─────────────────────────────────────────────────────────────────
 function scheduleInference(idx) {
+  runSeq[idx]++;                       // cancel any in-flight streaming generation
   clearTimeout(debounces[idx]);
   debounces[idx] = setTimeout(() => runInference(idx), 280);
 }
@@ -769,6 +768,7 @@ async function runInference(idx) {
   const modelId  = MODELS[idx].id;
   const { encoder, reverseVocab, vocabSize, unkIdx } = modelVocabs[idx];
   const nPredict = MODELS[idx].predictTokens ?? PREDICT_TOKENS;
+  const myRun = runSeq[idx];   // abort this generation if a newer input/accept supersedes it
   setStatus(idx, 'predicting…');
 
   if (encoder) {
@@ -785,12 +785,15 @@ async function runInference(idx) {
       let results;
       try { results = await sessions[idx].run({ input: tensor }); }
       catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
+      if (myRun !== runSeq[idx]) return;
       const bestIdx = sampleToken(results.logits.data, readPos * vocabSize, vocabSize, unkIdx);
       predToks.push(bestIdx);
       realTokens.push(bestIdx);
       if (realTokens.length > seqLen) realTokens = realTokens.slice(-seqLen);
+      setGhost(idx, text, encoder.decode(new Uint32Array(predToks)));  // show each token as it lands
+      await new Promise(resolve => setTimeout(resolve, 0));            // yield so it paints
+      if (myRun !== runSeq[idx]) return;
     }
-    setGhost(idx, text, encoder.decode(new Uint32Array(predToks)));  // js-tiktoken expects Uint32Array
     setStatus(idx, `${nPredict} tokens predicted`);
     return;
   }
@@ -799,6 +802,7 @@ async function runInference(idx) {
   let ids;
   try { ids = await tokenizeRemote(text, seqLen, modelId); }
   catch (e) { setStatus(idx, `tokenize error: ${e.message}`); return; }
+  if (myRun !== runSeq[idx]) return;
 
   const window = [...ids];
   const words  = [];
@@ -807,12 +811,15 @@ async function runInference(idx) {
     let results;
     try { results = await sessions[idx].run({ input: tensor }); }
     catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
+    if (myRun !== runSeq[idx]) return;
     const bestIdx = sampleToken(results.logits.data, (seqLen - 1) * vocabSize, vocabSize, unkIdx);
     words.push(reverseVocab[bestIdx] || '');
     window.push(bestIdx);
     window.shift();
+    setGhost(idx, text, ' ' + words.join(' '));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (myRun !== runSeq[idx]) return;
   }
-  setGhost(idx, text, ' ' + words.join(' '));
   setStatus(idx, `${nPredict} tokens predicted`);
 }
 
@@ -820,9 +827,18 @@ async function runInference(idx) {
 function setGhost(idx, userText, predText) {
   pendingPrediction[idx] = predText;
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  document.getElementById(`ghost${idx}`).innerHTML =
+  const ta    = document.getElementById(`ta${idx}`);
+  const ghost = document.getElementById(`ghost${idx}`);
+  ghost.innerHTML =
     `<span class="user-mirror">${esc(userText)}</span>` +
     `<span class="ghost-pred">${esc(predText)}</span>`;
+  // grow/shrink the box to fit user text + the (possibly multi-line) prediction, so streamed
+  // ghost tokens stay visible without waiting for accept
+  ta.style.height = 'auto';
+  ghost.style.height = 'auto';
+  const h = Math.max(ta.scrollHeight, ghost.scrollHeight);
+  ta.style.height = h + 'px';
+  ghost.style.height = h + 'px';
   const acc = document.getElementById(`acc${idx}`);
   if (acc) acc.hidden = !predText;
 }
@@ -1016,18 +1032,20 @@ buildPrompts();
 buildRankList();
 initPage();
 fetchAndRenderRankings();
-// Phones: ONNX models are large and on-device inference is slow, so auto-load only the
-// first model (Run 8) and defer the rest behind an explicit "Load model" button.
+// Phones: show only the latest model (Run 8); hide older models to keep the interface
+// light and avoid heavy downloads + slow on-device inference.
 const isPhone = window.matchMedia('(max-width: 680px)').matches;
 MODELS.forEach((_, idx) => {
   if (!isPhone || idx === 0) {
     loadModel(idx);
   } else {
-    document.getElementById(`ta${idx}`).disabled = true;
-    document.getElementById(`loadbtn${idx}`).hidden = false;
-    setStatus(idx, 'tap “Load model” to download (~300 MB)');
+    document.getElementById(`panel${idx}`).hidden = true;
   }
 });
+if (isPhone) {
+  document.getElementById('vocab-status').textContent =
+    'Phone view — latest model (Run 8) only. Open on desktop to compare all models.';
+}
 </script>
 </body>
 </html>
