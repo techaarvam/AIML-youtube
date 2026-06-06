@@ -141,6 +141,23 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
 .load-overlay .load-text { font-size: 0.82em; font-weight: bold; color: #4a6fa5; }
 .load-overlay .load-sub  { font-size: 0.68em; color: #9aaabf; }
 
+/* tap-to-accept (mobile has no Tab key) + explicit per-model load button */
+.accept-btn {
+  margin-top: 8px; padding: 6px 14px;
+  font-family: monospace; font-size: 0.74em;
+  color: #4a6fa5; background: #eaf0f8;
+  border: 1px solid #c8d8ec; border-radius: 6px; cursor: pointer;
+}
+.accept-btn:hover { background: #d8e8f8; }
+.load-btn {
+  margin-top: 8px; padding: 8px 16px;
+  font-family: monospace; font-size: 0.78em; font-weight: bold;
+  color: #fff; background: #4a6fa5;
+  border: none; border-radius: 6px; cursor: pointer;
+}
+.load-btn:hover { background: #3a5a8f; }
+.accept-btn[hidden], .load-btn[hidden] { display: none; }
+
 /* ── Lineage ── */
 #lineage {
   margin-top: 22px;
@@ -517,15 +534,6 @@ const RELEASE = 'https://huggingface.co/vasantharam/aiml-youtube-models/resolve/
 
 const MODELS = [
   {
-    id:     'server_w128',
-    name:   'Run 3 · w128',
-    desc:   'First coded version · WikiText + Wiki+OWT · word vocab',
-    onnx:   `${RELEASE}/model_server_w128.onnx`,
-    vocab:  `${RELEASE}/vocab_server.json`,
-    seqLen: 127,
-    svgs:   ['wiki_server_w128.svg'],
-  },
-  {
     id:       'run8_d1024',
     name:     'Run 8 · d1024',
     desc:     'GPT-2 BPE · d1024 · OpenWebText',
@@ -533,6 +541,15 @@ const MODELS = [
     tiktoken: 'gpt2',
     seqLen:   255,          // model window 256 → fixed ONNX seq length 255
     svgs:     [],           // no lineage SVG — the build-contrast banner covers it
+  },
+  {
+    id:     'server_w128',
+    name:   'Run 3 · w128',
+    desc:   'First coded version · WikiText + Wiki+OWT · word vocab',
+    onnx:   `${RELEASE}/model_server_w128.onnx`,
+    vocab:  `${RELEASE}/vocab_server.json`,
+    seqLen: 127,
+    svgs:   ['wiki_server_w128.svg'],
   },
 
   // Hidden 2026-06-05 — page repositioned around Run 3 + the new GPT-2 / d1024
@@ -623,6 +640,8 @@ function buildPanels() {
           <div class="load-sub">~300 MB · may take a minute</div>
         </div>
       </div>
+      <button class="accept-btn" id="acc${idx}" hidden>accept prediction ⇥</button>
+      <button class="load-btn" id="loadbtn${idx}" hidden>Load model (~300 MB)</button>
       <div class="panel-status" id="st${idx}">click to load model</div>
     `;
     grid.appendChild(panel);
@@ -637,12 +656,13 @@ function buildPanels() {
     ta.addEventListener('keydown', (e) => {
       if (e.key === 'Tab' && pendingPrediction[idx]) {
         e.preventDefault();
-        ta.value += pendingPrediction[idx];
-        pendingPrediction[idx] = '';
-        clearGhost(idx, ta.value);
-        autoExpand(ta, ghost);
-        scheduleInference(idx);
+        acceptPrediction(idx);
       }
+    });
+    document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
+    document.getElementById(`loadbtn${idx}`).addEventListener('click', () => {
+      document.getElementById(`loadbtn${idx}`).hidden = true;
+      loadModel(idx);
     });
     ta.addEventListener('input', () => {
       autoExpand(ta, ghost);
@@ -658,6 +678,19 @@ function autoExpand(ta, ghost) {
   ghost.style.height = ta.scrollHeight + 'px';
 }
 function clearGhost(idx, text) { setGhost(idx, text, ''); }
+
+// Append the pending ghost prediction. Bound to both Tab (desktop) and the on-screen
+// "accept" button (mobile has no Tab key).
+function acceptPrediction(idx) {
+  if (!pendingPrediction[idx]) return;
+  const ta    = document.getElementById(`ta${idx}`);
+  const ghost = document.getElementById(`ghost${idx}`);
+  ta.value += pendingPrediction[idx];
+  pendingPrediction[idx] = '';
+  clearGhost(idx, ta.value);
+  autoExpand(ta, ghost);
+  scheduleInference(idx);
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 function initPage() {
@@ -710,6 +743,7 @@ async function loadModel(idx) {
     document.getElementById(`lb${idx}`).classList.remove('active');
     setStatus(idx, 'ready');
     const ta = document.getElementById(`ta${idx}`);
+    ta.disabled = false;
     if (ta.value.trim()) scheduleInference(idx);
   } catch (e) {
     loadState[idx] = 'error';
@@ -789,6 +823,8 @@ function setGhost(idx, userText, predText) {
   document.getElementById(`ghost${idx}`).innerHTML =
     `<span class="user-mirror">${esc(userText)}</span>` +
     `<span class="ghost-pred">${esc(predText)}</span>`;
+  const acc = document.getElementById(`acc${idx}`);
+  if (acc) acc.hidden = !predText;
 }
 function setDot(idx, cls) {
   document.getElementById(`dot${idx}`).className = `dot ${cls}`;
@@ -964,11 +1000,10 @@ function buildPrompts() {
       MODELS.forEach((_, idx) => {
         const ta    = document.getElementById(`ta${idx}`);
         const ghost = document.getElementById(`ghost${idx}`);
-        if (loadState[idx] === 'idle') loadModel(idx);
         ta.value = text;
         autoExpand(ta, ghost);
         clearGhost(idx, text);
-        scheduleInference(idx);
+        scheduleInference(idx);   // no-op until the model is loaded (deferred on phones)
       });
     });
     container.appendChild(chip);
@@ -981,7 +1016,18 @@ buildPrompts();
 buildRankList();
 initPage();
 fetchAndRenderRankings();
-MODELS.forEach((_, idx) => loadModel(idx));
+// Phones: ONNX models are large and on-device inference is slow, so auto-load only the
+// first model (Run 8) and defer the rest behind an explicit "Load model" button.
+const isPhone = window.matchMedia('(max-width: 680px)').matches;
+MODELS.forEach((_, idx) => {
+  if (!isPhone || idx === 0) {
+    loadModel(idx);
+  } else {
+    document.getElementById(`ta${idx}`).disabled = true;
+    document.getElementById(`loadbtn${idx}`).hidden = false;
+    setStatus(idx, 'tap “Load model” to download (~300 MB)');
+  }
+});
 </script>
 </body>
 </html>
