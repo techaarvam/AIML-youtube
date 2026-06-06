@@ -9,6 +9,10 @@
       "path": "pytorch_exercises/index.html"
     },
     {
+      "title": "Unix Shell Dojo — Speed Exercises",
+      "path": "unix_shell_exercises/index.html"
+    },
+    {
       "title": "TechAarvam YouTube Feed",
       "path": "youtube_feed.html"
     },
