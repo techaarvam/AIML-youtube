@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>80–120M Parameter Tiny Transformer — Learning Project</title>
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.webgpu.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -51,13 +50,24 @@ h1 { color: #4a6fa5; font-size: 1.2em; letter-spacing: 0.02em; }
   transition: border-color 0.3s;
 }
 
-/* ── Inference grid ── */
+/* ── Inference (one active model at a time; Run 8 default, Run 3 expandable) ── */
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 14px;
 }
-@media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+.panel[hidden] { display: none; }
+
+.disc-toggle {
+  width: 100%; text-align: left;
+  font-family: monospace; font-size: 0.78em;
+  color: #6a7f99; background: #eef3f9;
+  border: 1px dashed #c8d8ec; border-radius: 6px;
+  padding: 9px 14px; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.disc-toggle:hover { background: #e0ebf7; border-color: #9bbbdc; }
+.disc-toggle .caret { display: inline-block; width: 1.1em; color: #9aaabf; }
 
 .panel {
   background: #ffffff;
@@ -472,49 +482,8 @@ function updateSamplerUI() {
   document.getElementById('param-top-p').style.display = s === 'top_p' ? '' : 'none';
 }
 
-function sampleToken(logits, base, vocabSize, unkIdx) {
-  const sampler = document.getElementById('sampler-select').value;
-  const temp    = parseFloat(document.getElementById('temperature').value) || 1.0;
-
-  const pairs = [];
-  for (let i = 0; i < vocabSize; i++) {
-    if (i === unkIdx) continue;
-    pairs.push([logits[base + i] / temp, i]);
-  }
-  pairs.sort((a, b) => b[0] - a[0]);
-
-  const maxL   = pairs[0][0];
-  const exps   = pairs.map(([v]) => Math.exp(v - maxL));
-  const expSum = exps.reduce((a, b) => a + b, 0);
-  const probs  = exps.map(e => e / expSum);
-
-  let filtered;
-  if (sampler === 'top_k') {
-    const k = parseInt(document.getElementById('top-k-val').value) || 20;
-    filtered = probs.slice(0, k).map((p, i) => [p, pairs[i][1]]);
-  } else if (sampler === 'top_p') {
-    const p = parseFloat(document.getElementById('top-p-val').value) || 0.9;
-    filtered = [];
-    let cumul = 0;
-    for (let i = 0; i < probs.length; i++) {
-      filtered.push([probs[i], pairs[i][1]]);
-      cumul += probs[i];
-      if (cumul >= p) break;
-    }
-  } else {  // min_p
-    const minP      = parseFloat(document.getElementById('min-p-val').value) || 0.05;
-    const threshold = minP * probs[0];
-    filtered = probs.map((p, i) => [p, pairs[i][1]]).filter(([p]) => p >= threshold);
-  }
-
-  const filtSum = filtered.reduce((a, [p]) => a + p, 0);
-  let r = Math.random() * filtSum, cumul = 0;
-  for (const [p, idx] of filtered) {
-    cumul += p;
-    if (r <= cumul) return idx;
-  }
-  return filtered[0][1];
-}
+// Sampling now runs server-side in the Firebase `predict` function; the sampler
+// UI only collects parameters (see samplerParams()).
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 const PREDICT_TOKENS = 5;   // ghost prediction length — adjust here
@@ -527,71 +496,34 @@ const PROMPTS = [
   'she opened the letter and read',
 ];
 
-// Fill in after `firebase deploy --only functions`
-// firebase functions:list will show the URLs
+// Firebase functions base — server-side tokenization + inference live here.
+// `firebase functions:list` shows the URLs after deploy.
 const FUNCTIONS_BASE = 'https://us-central1-techaarvam.cloudfunctions.net';
 
-const RELEASE = 'https://huggingface.co/vasantharam/aiml-youtube-models/resolve/main';
-
+// Model ids must match the server INFER_MODELS keys in functions/index.js.
 const MODELS = [
   {
-    id:       'run8_d1024',
-    name:     'Run 8 · d1024',
-    desc:     'GPT-2 BPE · d1024 · OpenWebText',
-    onnx:     `${RELEASE}/progressive_d1024.onnx`,
-    tiktoken: 'gpt2',
-    seqLen:   255,          // model window 256 → fixed ONNX seq length 255
-    svgs:     [],           // no lineage SVG — the build-contrast banner covers it
+    id:     'run8_d1024',
+    name:   'Run 8 · d1024',
+    desc:   'GPT-2 BPE · d1024 · OpenWebText',
+    seqLen: 255,
+    svgs:   [],   // no lineage SVG — the build-contrast banner covers it
   },
   {
     id:     'server_w128',
     name:   'Run 3 · w128',
     desc:   'First coded version · WikiText + Wiki+OWT · word vocab',
-    onnx:   `${RELEASE}/model_server_w128.onnx`,
-    vocab:  `${RELEASE}/vocab_server.json`,
     seqLen: 127,
-    svgs:   ['btm_lineage_out1.svg', 'wiki_server_w128.svg'],   // common WikiText start + BTM, then the server continuation
+    svgs:   ['btm_lineage_out1.svg', 'wiki_server_w128.svg'],
   },
-
-  // Hidden 2026-06-05 — page repositioned around Run 3 + the new GPT-2 / d1024
-  // build. Restore by un-commenting. The new d1024 model entry is wired on the
-  // d1024 branch.
-  // {
-  //   id:     'local_w64',
-  //   name:   'Local · w64',
-  //   desc:   'WikiText-103 · 5 epochs · loss 4.24 · ppl 69',
-  //   onnx:   `${RELEASE}/model_local_w64.onnx`,
-  //   vocab:  `${RELEASE}/vocab_local.json`,
-  //   seqLen: 63,
-  //   svgs:   ['wiki_local_w64.svg'],
-  // },
-  // {
-  //   id:     'local_w128',
-  //   name:   'Local · w128',
-  //   desc:   'WikiText-103 · context extended 64→128 · loss 3.85 · ppl 47',
-  //   onnx:   `${RELEASE}/model_local_w128.onnx`,
-  //   vocab:  `${RELEASE}/vocab_local.json`,
-  //   seqLen: 127,
-  //   svgs:   ['wiki_local_w64.svg', 'wiki_local_w128.svg'],
-  // },
-  // {
-  //   id:     'server_w256_out2',
-  //   name:   'Server BTM · w256 · output 2',
-  //   desc:   'Wiki+OWT · BTM lineage · loss 4.77 · vocab corrupted at BTM start (see notes)',
-  //   onnx:   `${RELEASE}/model_server_w256_out2.onnx`,
-  //   vocab:  `${RELEASE}/vocab_server.json`,
-  //   seqLen: 255,
-  //   svgs:   ['btm_lineage_out1.svg', 'btm_lineage_out2.svg'],
-  // },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const sessions          = new Array(MODELS.length).fill(null);
-const loadState         = new Array(MODELS.length).fill('idle');
 const debounces         = new Array(MODELS.length).fill(null);
-const modelVocabs       = new Array(MODELS.length).fill(null); // {reverseVocab, vocabSize, unkIdx}
 const pendingPrediction = new Array(MODELS.length).fill('');
-const runSeq            = new Array(MODELS.length).fill(0);  // per-panel generation id (streaming cancel)
+const runSeq            = new Array(MODELS.length).fill(0);      // per-panel request id (drop stale responses)
+const warmState         = new Array(MODELS.length).fill('idle'); // idle | warming | ready | error
+let   activeIdx         = 0;  // only one model is active/inferring at a time
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
 function getCookie(name) {
@@ -606,68 +538,104 @@ function setCookie(name, value, days) {
 const VOTE_COOKIE = 'ta_ranking_v2';
 const hasVoted    = () => !!getCookie(VOTE_COOKIE);
 
-// ── Tokenizer (server-side via Firebase function) ─────────────────────────────
-async function tokenizeRemote(text, seqLen, modelId) {
-  const resp = await fetch(`${FUNCTIONS_BASE}/tokenize`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ text, seqLen, modelId }),
-  });
-  const data = await resp.json();
-  if (!data.ok) throw new Error('tokenize failed');
-  return data.ids;  // already padded int[] of length seqLen
+// ── Server-side inference (Firebase function) ─────────────────────────────────
+function samplerParams() {
+  return {
+    sampler:     document.getElementById('sampler-select').value,
+    temperature: parseFloat(document.getElementById('temperature').value) || 0.8,
+    topP:        parseFloat(document.getElementById('top-p-val').value)   || 0.9,
+    topK:        parseInt(document.getElementById('top-k-val').value)     || 20,
+    minP:        parseFloat(document.getElementById('min-p-val').value)   || 0.05,
+  };
 }
 
-// ── Build inference panels ─────────────────────────────────────────────────────
+async function callPredict(payload) {
+  const resp = await fetch(`${FUNCTIONS_BASE}/predict`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.error || 'predict failed');
+  return data;
+}
+
+// ── Build inference panels (Run 8 visible; older models behind a disclosure) ────
+function panelMarkup(m, idx) {
+  return `
+    <div class="panel-header">
+      <div class="dot" id="dot${idx}"></div>
+      <span class="panel-name">${m.name}</span>
+    </div>
+    <div class="panel-meta">${m.desc} &nbsp;·&nbsp; ctx ${m.seqLen + 1}</div>
+    <div class="editor-wrap">
+      <div class="ghost-layer" id="ghost${idx}" aria-hidden="true"></div>
+      <textarea class="editor" id="ta${idx}"
+        placeholder="Start typing…"
+        spellcheck="false"></textarea>
+      <div class="load-overlay" id="lb${idx}">
+        <div class="load-spinner"></div>
+        <div class="load-text">Warming up model…</div>
+        <div class="load-sub">first request after idle may take a few seconds</div>
+      </div>
+    </div>
+    <button class="accept-btn" id="acc${idx}" hidden>accept prediction ⇥</button>
+    <div class="panel-status" id="st${idx}">ready</div>
+  `;
+}
+
+function wirePanel(idx) {
+  const ta    = document.getElementById(`ta${idx}`);
+  const ghost = document.getElementById(`ghost${idx}`);
+  ta.addEventListener('focus', () => setActive(idx));
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' && pendingPrediction[idx]) {
+      e.preventDefault();
+      acceptPrediction(idx);
+    }
+  });
+  document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
+  ta.addEventListener('input', () => {
+    autoExpand(ta, ghost);
+    clearGhost(idx, ta.value);
+    scheduleInference(idx);
+  });
+}
+
 function buildPanels() {
   const grid = document.getElementById('grid');
   MODELS.forEach((m, idx) => {
+    if (idx > 0) {
+      // older models: collapsed disclosure, hidden by default (desktop + mobile)
+      const toggle = document.createElement('button');
+      toggle.className = 'disc-toggle';
+      toggle.id = `disctog${idx}`;
+      toggle.innerHTML = `<span class="caret">▸</span> old model — ${m.name}`;
+      toggle.addEventListener('click', () => toggleDisclosure(idx));
+      grid.appendChild(toggle);
+    }
     const panel = document.createElement('div');
     panel.className = 'panel';
     panel.id = `panel${idx}`;
-    panel.innerHTML = `
-      <div class="panel-header">
-        <div class="dot" id="dot${idx}"></div>
-        <span class="panel-name">${m.name}</span>
-      </div>
-      <div class="panel-meta">${m.desc} &nbsp;·&nbsp; ctx ${m.seqLen + 1}</div>
-      <div class="editor-wrap">
-        <div class="ghost-layer" id="ghost${idx}" aria-hidden="true"></div>
-        <textarea class="editor" id="ta${idx}"
-          placeholder="Start typing…"
-          spellcheck="false"
-          disabled></textarea>
-        <div class="load-overlay" id="lb${idx}">
-          <div class="load-spinner"></div>
-          <div class="load-text">Loading model…</div>
-          <div class="load-sub">~300 MB · may take a minute</div>
-        </div>
-      </div>
-      <button class="accept-btn" id="acc${idx}" hidden>accept prediction ⇥</button>
-      <div class="panel-status" id="st${idx}">click to load model</div>
-    `;
+    panel.hidden = idx > 0;
+    panel.innerHTML = panelMarkup(m, idx);
     grid.appendChild(panel);
-
-    const ta    = document.getElementById(`ta${idx}`);
-    const ghost = document.getElementById(`ghost${idx}`);
-
-    ta.addEventListener('focus', () => {
-      if (loadState[idx] === 'idle') loadModel(idx);
-      showLineage(idx);
-    });
-    ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab' && pendingPrediction[idx]) {
-        e.preventDefault();
-        acceptPrediction(idx);
-      }
-    });
-    document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
-    ta.addEventListener('input', () => {
-      autoExpand(ta, ghost);
-      clearGhost(idx, ta.value);
-      scheduleInference(idx);
-    });
+    wirePanel(idx);
   });
+}
+
+function toggleDisclosure(idx) {
+  const panel  = document.getElementById(`panel${idx}`);
+  const toggle = document.getElementById(`disctog${idx}`);
+  const opening = panel.hidden;
+  panel.hidden = !opening;
+  toggle.querySelector('.caret').textContent = opening ? '▾' : '▸';
+  if (opening) {
+    setActive(idx);
+    document.getElementById(`ta${idx}`).focus();
+  } else if (activeIdx === idx) {
+    setActive(0);   // collapsing the active one → fall back to Run 8
+  }
 }
 
 function autoExpand(ta, ghost) {
@@ -690,137 +658,73 @@ function acceptPrediction(idx) {
   scheduleInference(idx);
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-function initPage() {
-  ort.env.wasm.numThreads = 1;
-  const statusEl = document.getElementById('vocab-status');
-  statusEl.textContent       = 'Click a panel to load its model';
-  statusEl.style.borderColor = '#7ec89a';
-  MODELS.forEach((_, idx) => {
-    document.getElementById(`ta${idx}`).disabled = false;
-  });
+// ── Activate one model for inference (only the active model predicts) ──────────
+function setActive(idx) {
+  activeIdx = idx;
+  showLineage(idx);
+  warmModel(idx);
+  const ta = document.getElementById(`ta${idx}`);
+  if (ta.value.trim()) scheduleInference(idx);
 }
 
-// ── Lazy model loading ────────────────────────────────────────────────────────
-async function loadModel(idx) {
-  if (loadState[idx] !== 'idle') return;
-  loadState[idx] = 'loading';
+// ── Warm the server session so the first real prediction is fast ──────────────
+async function warmModel(idx) {
+  if (warmState[idx] === 'warming' || warmState[idx] === 'ready') return;
+  warmState[idx] = 'warming';
   setDot(idx, 'loading');
-  setStatus(idx, `loading model… (300 MB, may take a minute)`);
+  setStatus(idx, 'warming up server…');
   document.getElementById(`lb${idx}`).classList.add('active');
   try {
-    const m = MODELS[idx];
-    let session, vocabMeta;
-
-    if (m.tiktoken) {
-      // GPT-2 BPE — load tiktoken and ONNX in parallel
-      const [sess, tikMod] = await Promise.all([
-        ort.InferenceSession.create(m.onnx, { executionProviders: ['webgpu', 'wasm'] }),
-        import('https://esm.sh/js-tiktoken@1.0.12').then(mod => mod.getEncoding(m.tiktoken)),
-      ]);
-      session = sess;
-      vocabMeta = { encoder: tikMod, vocabSize: 50257, unkIdx: -1 };
-    } else {
-      const [sess, vocabData] = await Promise.all([
-        ort.InferenceSession.create(m.onnx, { executionProviders: ['webgpu', 'wasm'] }),
-        fetch(m.vocab).then(r => r.json()),
-      ]);
-      session = sess;
-      const unkI = vocabData['<unk>'] ?? -1;
-      vocabMeta = {
-        reverseVocab: Object.fromEntries(Object.entries(vocabData).map(([w, i]) => [i, w])),
-        vocabSize:    Object.keys(vocabData).length,
-        unkIdx:       unkI,
-      };
-    }
-
-    sessions[idx]    = session;
-    modelVocabs[idx] = vocabMeta;
-    loadState[idx] = 'ready';
+    await callPredict({ modelId: MODELS[idx].id, warmup: true });
+    warmState[idx] = 'ready';
     setDot(idx, 'ready');
-    document.getElementById(`lb${idx}`).classList.remove('active');
     setStatus(idx, 'ready');
-    const ta = document.getElementById(`ta${idx}`);
-    ta.disabled = false;
-    if (ta.value.trim()) scheduleInference(idx);
   } catch (e) {
-    loadState[idx] = 'error';
+    warmState[idx] = 'error';
     setDot(idx, 'error');
-    document.getElementById(`lb${idx}`).classList.remove('active');
     setStatus(idx, `error: ${e.message}`);
+  } finally {
+    document.getElementById(`lb${idx}`).classList.remove('active');
   }
 }
 
-// ── Inference ─────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────
+function initPage() {
+  const statusEl = document.getElementById('vocab-status');
+  statusEl.textContent       = 'Type in the box — prediction runs on the server';
+  statusEl.style.borderColor = '#7ec89a';
+}
+
+// ── Inference (server-side via Firebase predict function) ─────────────────────
 function scheduleInference(idx) {
-  runSeq[idx]++;                       // cancel any in-flight streaming generation
+  if (idx !== activeIdx) return;       // only the active model infers
+  runSeq[idx]++;                       // invalidate any in-flight response
   clearTimeout(debounces[idx]);
   debounces[idx] = setTimeout(() => runInference(idx), 280);
 }
 
 async function runInference(idx) {
-  if (loadState[idx] !== 'ready') return;
+  if (idx !== activeIdx) return;
   const ta   = document.getElementById(`ta${idx}`);
   const text = ta.value;
   if (!text.trim()) { setGhost(idx, text, ''); return; }
 
-  const seqLen   = MODELS[idx].seqLen;
-  const modelId  = MODELS[idx].id;
-  const { encoder, reverseVocab, vocabSize, unkIdx } = modelVocabs[idx];
-  const nPredict = MODELS[idx].predictTokens ?? PREDICT_TOKENS;
-  const myRun = runSeq[idx];   // abort this generation if a newer input/accept supersedes it
+  const myRun = runSeq[idx];           // drop the response if a newer keystroke supersedes it
   setStatus(idx, 'predicting…');
-
-  if (encoder) {
-    // GPT-2 BPE, causal model with a fixed ONNX seq length. Right-pad (real tokens first)
-    // and read logits at the last real position — under the causal mask the trailing pad
-    // is never attended to, so short prompts stay in-distribution (no zero-context collapse).
-    let realTokens = Array.from(encoder.encode(text)).slice(-seqLen);
-    const predToks = [];
-    for (let step = 0; step < nPredict; step++) {
-      const padded = new Array(seqLen).fill(0);
-      realTokens.forEach((tok, pos) => { padded[pos] = tok; });
-      const readPos = realTokens.length - 1;
-      const tensor = new ort.Tensor('int64', BigInt64Array.from(padded.map(BigInt)), [1, seqLen]);
-      let results;
-      try { results = await sessions[idx].run({ input: tensor }); }
-      catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
-      if (myRun !== runSeq[idx]) return;
-      const bestIdx = sampleToken(results.logits.data, readPos * vocabSize, vocabSize, unkIdx);
-      predToks.push(bestIdx);
-      realTokens.push(bestIdx);
-      if (realTokens.length > seqLen) realTokens = realTokens.slice(-seqLen);
-      setGhost(idx, text, encoder.decode(new Uint32Array(predToks)));  // show each token as it lands
-      await new Promise(resolve => setTimeout(resolve, 0));            // yield so it paints
-      if (myRun !== runSeq[idx]) return;
-    }
-    setStatus(idx, `${nPredict} tokens predicted`);
-    return;
+  try {
+    const data = await callPredict({
+      modelId:  MODELS[idx].id,
+      text,
+      nPredict: PREDICT_TOKENS,
+      ...samplerParams(),
+    });
+    if (myRun !== runSeq[idx] || idx !== activeIdx) return;
+    setGhost(idx, text, data.prediction || '');
+    setStatus(idx, `${(data.tokens || []).length} tokens predicted`);
+  } catch (e) {
+    if (myRun !== runSeq[idx] || idx !== activeIdx) return;
+    setStatus(idx, `error: ${e.message}`);
   }
-
-  // Word-vocab models: ids come back already padded from the server tokenizer.
-  let ids;
-  try { ids = await tokenizeRemote(text, seqLen, modelId); }
-  catch (e) { setStatus(idx, `tokenize error: ${e.message}`); return; }
-  if (myRun !== runSeq[idx]) return;
-
-  const window = [...ids];
-  const words  = [];
-  for (let step = 0; step < nPredict; step++) {
-    const tensor = new ort.Tensor('int64', BigInt64Array.from(window.map(BigInt)), [1, seqLen]);
-    let results;
-    try { results = await sessions[idx].run({ input: tensor }); }
-    catch (e) { setStatus(idx, `inference error: ${e.message}`); return; }
-    if (myRun !== runSeq[idx]) return;
-    const bestIdx = sampleToken(results.logits.data, (seqLen - 1) * vocabSize, vocabSize, unkIdx);
-    words.push(reverseVocab[bestIdx] || '');
-    window.push(bestIdx);
-    window.shift();
-    setGhost(idx, text, ' ' + words.join(' '));
-    await new Promise(resolve => setTimeout(resolve, 0));
-    if (myRun !== runSeq[idx]) return;
-  }
-  setStatus(idx, `${nPredict} tokens predicted`);
 }
 
 // ── Ghost text ────────────────────────────────────────────────────────────────
@@ -1013,14 +917,14 @@ function buildPrompts() {
     chip.className   = 'prompt-chip';
     chip.textContent = text;
     chip.addEventListener('click', () => {
-      MODELS.forEach((_, idx) => {
-        const ta    = document.getElementById(`ta${idx}`);
-        const ghost = document.getElementById(`ghost${idx}`);
-        ta.value = text;
-        autoExpand(ta, ghost);
-        clearGhost(idx, text);
-        scheduleInference(idx);   // no-op until the model is loaded (deferred on phones)
-      });
+      const idx   = activeIdx;
+      const ta    = document.getElementById(`ta${idx}`);
+      const ghost = document.getElementById(`ghost${idx}`);
+      ta.value = text;
+      ta.focus();
+      autoExpand(ta, ghost);
+      clearGhost(idx, text);
+      scheduleInference(idx);
     });
     container.appendChild(chip);
   });
@@ -1032,20 +936,7 @@ buildPrompts();
 buildRankList();
 initPage();
 fetchAndRenderRankings();
-// Phones: show only the latest model (Run 8); hide older models to keep the interface
-// light and avoid heavy downloads + slow on-device inference.
-const isPhone = window.matchMedia('(max-width: 680px)').matches;
-MODELS.forEach((_, idx) => {
-  if (!isPhone || idx === 0) {
-    loadModel(idx);
-  } else {
-    document.getElementById(`panel${idx}`).hidden = true;
-  }
-});
-if (isPhone) {
-  document.getElementById('vocab-status').textContent =
-    'Phone view — latest model (Run 8) only. Open on desktop to compare all models.';
-}
+setActive(0);   // Run 8 active + visible by default; warms its server session
 </script>
 </body>
 </html>
