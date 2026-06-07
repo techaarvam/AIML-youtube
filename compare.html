@@ -528,6 +528,8 @@ const runSeq            = new Array(MODELS.length).fill(0);      // per-panel re
 const warmState         = new Array(MODELS.length).fill('idle'); // idle | warming | ready | error
 const bufferChunks      = new Array(MODELS.length).fill(null);   // predicted continuation, in 5-token chunks
 const bufferPos         = new Array(MODELS.length).fill(0);      // next chunk to reveal on accept
+const prefetchChunks    = new Array(MODELS.length).fill(null);   // next batch fetched ahead of the drain
+const prefetchPending   = new Array(MODELS.length).fill(false);  // a prefetch request is in flight
 let   activeIdx         = 0;  // only one model is active/inferring at a time
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
@@ -602,6 +604,7 @@ function wirePanel(idx) {
   document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
   ta.addEventListener('input', () => {
     bufferChunks[idx] = null; bufferPos[idx] = 0;   // typing invalidates the buffer
+    prefetchChunks[idx] = null;                     // ...and any prefetched continuation
     autoExpand(ta, ghost);
     clearGhost(idx, ta.value);
     scheduleInference(idx);
@@ -659,9 +662,25 @@ function acceptPrediction(idx) {
   const ta = document.getElementById(`ta${idx}`);
   ta.value += chunks[bufferPos[idx]];           // append the shown chunk
   bufferPos[idx]++;
-  const next = chunks[bufferPos[idx]] || '';    // reveal the next chunk from the buffer; no new request
-  setGhost(idx, ta.value, next);
-  if (!next) setStatus(idx, 'type to predict more');
+
+  // after 2 accepts (~15 of 25 tokens shown), prefetch the next batch in the background
+  if (bufferPos[idx] === 2) prefetchNext(idx);
+
+  if (bufferPos[idx] < chunks.length) {
+    setGhost(idx, ta.value, chunks[bufferPos[idx]]);   // reveal next chunk; no request
+    return;
+  }
+
+  // buffer drained → swap in the prefetched batch if it has arrived
+  if (prefetchChunks[idx] && prefetchChunks[idx].length) {
+    bufferChunks[idx]   = prefetchChunks[idx];
+    prefetchChunks[idx] = null;
+    bufferPos[idx]      = 0;
+    setGhost(idx, ta.value, bufferChunks[idx][0] || '');
+  } else {
+    setGhost(idx, ta.value, '');
+    setStatus(idx, prefetchPending[idx] ? 'fetching more…' : 'type to predict more');
+  }
 }
 
 // ── Activate one model for inference (only the active model predicts) ──────────
@@ -713,7 +732,7 @@ async function runInference(idx) {
   if (idx !== activeIdx) return;
   const ta   = document.getElementById(`ta${idx}`);
   const text = ta.value;
-  if (!text.trim()) { bufferChunks[idx] = null; bufferPos[idx] = 0; setGhost(idx, text, ''); return; }
+  if (!text.trim()) { bufferChunks[idx] = null; bufferPos[idx] = 0; prefetchChunks[idx] = null; setGhost(idx, text, ''); return; }
 
   const myRun = runSeq[idx];           // drop the response if a newer keystroke supersedes it
   setStatus(idx, `predicting ${BUFFER_TOKENS}… (first reply is slow)`);
@@ -725,13 +744,49 @@ async function runInference(idx) {
       ...samplerParams(),
     });
     if (myRun !== runSeq[idx] || idx !== activeIdx) return;
-    bufferChunks[idx] = data.chunks || [];
-    bufferPos[idx]    = 0;
+    bufferChunks[idx]   = data.chunks || [];
+    bufferPos[idx]      = 0;
+    prefetchChunks[idx] = null;          // new context → drop any stale prefetch
     setGhost(idx, text, bufferChunks[idx][0] || '');
     setStatus(idx, `${(data.tokens || []).length} tokens buffered · Tab reveals 5 at a time`);
   } catch (e) {
     if (myRun !== runSeq[idx] || idx !== activeIdx) return;
     setStatus(idx, `error: ${e.message}`);
+  }
+}
+
+// Fetch the NEXT batch ahead of time, conditioned on the full current buffer being
+// accepted, so it's ready the instant the user drains the current one (no wait).
+async function prefetchNext(idx) {
+  if (prefetchPending[idx] || prefetchChunks[idx]) return;   // already queued or ready
+  const chunks = bufferChunks[idx];
+  if (!chunks) return;
+  const ta = document.getElementById(`ta${idx}`);
+  const futureText = ta.value + chunks.slice(bufferPos[idx]).join('');  // text once the buffer is fully accepted
+  const myRun = runSeq[idx];
+  prefetchPending[idx] = true;
+  try {
+    const data = await callPredict({
+      modelId:  MODELS[idx].id,
+      text:     futureText,
+      nPredict: BUFFER_TOKENS,
+      ...samplerParams(),
+    });
+    if (myRun !== runSeq[idx]) return;   // user typed since → discard
+    const fresh = data.chunks || [];
+    const cur   = bufferChunks[idx];
+    if (cur && bufferPos[idx] >= cur.length && idx === activeIdx) {
+      // buffer already drained and waiting on us → install + reveal immediately
+      bufferChunks[idx] = fresh;
+      bufferPos[idx]    = 0;
+      setGhost(idx, document.getElementById(`ta${idx}`).value, fresh[0] || '');
+    } else {
+      prefetchChunks[idx] = fresh;       // stash for the drain swap
+    }
+  } catch (e) {
+    /* silent — the normal re-request on drain covers it */
+  } finally {
+    prefetchPending[idx] = false;
   }
 }
 
@@ -928,7 +983,7 @@ function buildPrompts() {
       const idx   = activeIdx;
       const ta    = document.getElementById(`ta${idx}`);
       const ghost = document.getElementById(`ghost${idx}`);
-      bufferChunks[idx] = null; bufferPos[idx] = 0;
+      bufferChunks[idx] = null; bufferPos[idx] = 0; prefetchChunks[idx] = null;
       ta.value = text;
       ta.focus();
       autoExpand(ta, ghost);
