@@ -411,7 +411,7 @@ textarea.editor:disabled { opacity: 0.4; cursor: not-allowed; }
   Temp:
   <input type="number" id="temperature" value="0.8" min="0.1" max="3.0" step="0.05">
   <span id="param-min-p" style="display:none">min-p: <input type="number" id="min-p-val" value="0.05" min="0.01" max="0.5" step="0.01"></span>
-  <span id="param-top-k" style="display:none">k: <input type="number" id="top-k-val" value="20" min="1" max="200"></span>
+  <span id="param-top-k" style="display:none">k: <input type="number" id="top-k-val" value="50" min="1" max="200"></span>
   <span id="param-top-p">p: <input type="number" id="top-p-val" value="0.8" min="0.1" max="1.0" step="0.05"></span>
 </div>
 
@@ -486,10 +486,10 @@ function updateSamplerUI() {
 // UI only collects parameters (see samplerParams()).
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-// Tokens fetched per request. The server returns them split into chunks of 5; the
-// client reveals one chunk per accept (Tab) with no new request, and only re-requests
-// when you type. At cpu:2 ~25 tokens ≈ a ~30s first wait — lower for a shorter wait.
-const BUFFER_TOKENS = 25;
+// Tokens generated per request (one Tab-chunk). Each request returns 5 tokens (~6s at
+// cpu:2); the NEXT 5 are prefetched in the background while you read the current ones,
+// so accepts feel instant. Only ~5 tokens of lookahead are ever generated speculatively.
+const BUFFER_TOKENS = 5;
 
 const PROMPTS = [
   'the stock market fell sharply after',
@@ -551,7 +551,7 @@ function samplerParams() {
     sampler:     document.getElementById('sampler-select').value,
     temperature: parseFloat(document.getElementById('temperature').value) || 0.8,
     topP:        parseFloat(document.getElementById('top-p-val').value)   || 0.9,
-    topK:        parseInt(document.getElementById('top-k-val').value)     || 20,
+    topK:        parseInt(document.getElementById('top-k-val').value)     || 50,
     minP:        parseFloat(document.getElementById('min-p-val').value)   || 0.05,
   };
 }
@@ -663,33 +663,33 @@ function acceptPrediction(idx) {
   ta.value += chunks[bufferPos[idx]];           // append the shown chunk
   bufferPos[idx]++;
 
-  // after 2 accepts (~15 of 25 tokens shown), prefetch the next batch in the background
-  if (bufferPos[idx] === 2) prefetchNext(idx);
-
   if (bufferPos[idx] < chunks.length) {
-    setGhost(idx, ta.value, chunks[bufferPos[idx]]);   // reveal next chunk; no request
+    setGhost(idx, ta.value, chunks[bufferPos[idx]]);   // (only if a request returned >1 chunk)
     return;
   }
 
-  // buffer drained → swap in the prefetched batch if it has arrived
+  // drained the shown 5 → reveal the prefetched next 5 if ready, then prefetch the following 5
   if (prefetchChunks[idx] && prefetchChunks[idx].length) {
     bufferChunks[idx]   = prefetchChunks[idx];
     prefetchChunks[idx] = null;
     bufferPos[idx]      = 0;
     setGhost(idx, ta.value, bufferChunks[idx][0] || '');
+    prefetchNext(idx);
   } else {
     setGhost(idx, ta.value, '');
-    setStatus(idx, prefetchPending[idx] ? 'fetching more…' : 'type to predict more');
+    setStatus(idx, 'predicting next 5…');
+    prefetchNext(idx);   // no-op if already in flight; otherwise fetch + auto-install on arrival
   }
 }
 
 // ── Activate one model for inference (only the active model predicts) ──────────
 function setActive(idx) {
+  const switching = idx !== activeIdx;   // re-focusing the active model must not re-predict
   activeIdx = idx;
   showLineage(idx);
   warmModel(idx);
   const ta = document.getElementById(`ta${idx}`);
-  if (ta.value.trim()) scheduleInference(idx);
+  if (switching && ta.value.trim() && !bufferChunks[idx]) scheduleInference(idx);
 }
 
 // ── Warm the server session so the first real prediction is fast ──────────────
@@ -735,7 +735,7 @@ async function runInference(idx) {
   if (!text.trim()) { bufferChunks[idx] = null; bufferPos[idx] = 0; prefetchChunks[idx] = null; setGhost(idx, text, ''); return; }
 
   const myRun = runSeq[idx];           // drop the response if a newer keystroke supersedes it
-  setStatus(idx, `predicting ${BUFFER_TOKENS}… (first reply is slow)`);
+  setStatus(idx, 'predicting…');
   try {
     const data = await callPredict({
       modelId:  MODELS[idx].id,
@@ -748,7 +748,8 @@ async function runInference(idx) {
     bufferPos[idx]      = 0;
     prefetchChunks[idx] = null;          // new context → drop any stale prefetch
     setGhost(idx, text, bufferChunks[idx][0] || '');
-    setStatus(idx, `${(data.tokens || []).length} tokens buffered · Tab reveals 5 at a time`);
+    setStatus(idx, bufferChunks[idx][0] ? 'Tab to accept · next 5 loading' : 'no prediction');
+    prefetchNext(idx);                   // warm the next 5 while the user reads these
   } catch (e) {
     if (myRun !== runSeq[idx] || idx !== activeIdx) return;
     setStatus(idx, `error: ${e.message}`);
@@ -758,35 +759,39 @@ async function runInference(idx) {
 // Fetch the NEXT batch ahead of time, conditioned on the full current buffer being
 // accepted, so it's ready the instant the user drains the current one (no wait).
 async function prefetchNext(idx) {
-  if (prefetchPending[idx] || prefetchChunks[idx]) return;   // already queued or ready
+  if (prefetchPending[idx] || (prefetchChunks[idx] && prefetchChunks[idx].length)) return;
   const chunks = bufferChunks[idx];
   if (!chunks) return;
   const ta = document.getElementById(`ta${idx}`);
-  const futureText = ta.value + chunks.slice(bufferPos[idx]).join('');  // text once the buffer is fully accepted
+  const futureText = ta.value + chunks.slice(bufferPos[idx]).join('');  // text once the shown chunk is accepted
   const myRun = runSeq[idx];
   prefetchPending[idx] = true;
+  let data;
   try {
-    const data = await callPredict({
+    data = await callPredict({
       modelId:  MODELS[idx].id,
       text:     futureText,
       nPredict: BUFFER_TOKENS,
       ...samplerParams(),
     });
-    if (myRun !== runSeq[idx]) return;   // user typed since → discard
-    const fresh = data.chunks || [];
-    const cur   = bufferChunks[idx];
-    if (cur && bufferPos[idx] >= cur.length && idx === activeIdx) {
-      // buffer already drained and waiting on us → install + reveal immediately
-      bufferChunks[idx] = fresh;
-      bufferPos[idx]    = 0;
-      setGhost(idx, document.getElementById(`ta${idx}`).value, fresh[0] || '');
-    } else {
-      prefetchChunks[idx] = fresh;       // stash for the drain swap
-    }
   } catch (e) {
-    /* silent — the normal re-request on drain covers it */
-  } finally {
-    prefetchPending[idx] = false;
+    prefetchPending[idx] = false;        // silent — drain will retry
+    return;
+  }
+  prefetchPending[idx] = false;          // cleared before any chained call so the guard won't block it
+  if (myRun !== runSeq[idx]) return;     // user typed since → discard
+  const fresh = data.chunks || [];
+  const cur   = bufferChunks[idx];
+  if (cur && bufferPos[idx] >= cur.length && idx === activeIdx) {
+    // buffer already drained and waiting on us → install, reveal, and chain the next lookahead
+    bufferChunks[idx] = fresh;
+    bufferPos[idx]    = 0;
+    setGhost(idx, document.getElementById(`ta${idx}`).value, fresh[0] || '');
+    setStatus(idx, fresh[0] ? 'Tab to accept · next 5 loading' : 'type to predict more');
+    prefetchNext(idx);
+  } else {
+    prefetchChunks[idx] = fresh;         // stash for the swap on next accept
+    if (idx === activeIdx) setStatus(idx, 'Tab to accept · next 5 ready');
   }
 }
 
