@@ -486,7 +486,10 @@ function updateSamplerUI() {
 // UI only collects parameters (see samplerParams()).
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-const PREDICT_TOKENS = 5;   // ghost prediction length — adjust here
+// Tokens fetched per request. The server returns them split into chunks of 5; the
+// client reveals one chunk per accept (Tab) with no new request, and only re-requests
+// when you type. At cpu:2 ~25 tokens ≈ a ~30s first wait — lower for a shorter wait.
+const BUFFER_TOKENS = 25;
 
 const PROMPTS = [
   'the stock market fell sharply after',
@@ -523,6 +526,8 @@ const debounces         = new Array(MODELS.length).fill(null);
 const pendingPrediction = new Array(MODELS.length).fill('');
 const runSeq            = new Array(MODELS.length).fill(0);      // per-panel request id (drop stale responses)
 const warmState         = new Array(MODELS.length).fill('idle'); // idle | warming | ready | error
+const bufferChunks      = new Array(MODELS.length).fill(null);   // predicted continuation, in 5-token chunks
+const bufferPos         = new Array(MODELS.length).fill(0);      // next chunk to reveal on accept
 let   activeIdx         = 0;  // only one model is active/inferring at a time
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
@@ -596,6 +601,7 @@ function wirePanel(idx) {
   });
   document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
   ta.addEventListener('input', () => {
+    bufferChunks[idx] = null; bufferPos[idx] = 0;   // typing invalidates the buffer
     autoExpand(ta, ghost);
     clearGhost(idx, ta.value);
     scheduleInference(idx);
@@ -648,14 +654,14 @@ function clearGhost(idx, text) { setGhost(idx, text, ''); }
 // Append the pending ghost prediction. Bound to both Tab (desktop) and the on-screen
 // "accept" button (mobile has no Tab key).
 function acceptPrediction(idx) {
-  if (!pendingPrediction[idx]) return;
-  const ta    = document.getElementById(`ta${idx}`);
-  const ghost = document.getElementById(`ghost${idx}`);
-  ta.value += pendingPrediction[idx];
-  pendingPrediction[idx] = '';
-  clearGhost(idx, ta.value);
-  autoExpand(ta, ghost);
-  scheduleInference(idx);
+  const chunks = bufferChunks[idx];
+  if (!chunks || bufferPos[idx] >= chunks.length) return;
+  const ta = document.getElementById(`ta${idx}`);
+  ta.value += chunks[bufferPos[idx]];           // append the shown chunk
+  bufferPos[idx]++;
+  const next = chunks[bufferPos[idx]] || '';    // reveal the next chunk from the buffer; no new request
+  setGhost(idx, ta.value, next);
+  if (!next) setStatus(idx, 'type to predict more');
 }
 
 // ── Activate one model for inference (only the active model predicts) ──────────
@@ -707,20 +713,22 @@ async function runInference(idx) {
   if (idx !== activeIdx) return;
   const ta   = document.getElementById(`ta${idx}`);
   const text = ta.value;
-  if (!text.trim()) { setGhost(idx, text, ''); return; }
+  if (!text.trim()) { bufferChunks[idx] = null; bufferPos[idx] = 0; setGhost(idx, text, ''); return; }
 
   const myRun = runSeq[idx];           // drop the response if a newer keystroke supersedes it
-  setStatus(idx, 'predicting…');
+  setStatus(idx, `predicting ${BUFFER_TOKENS}… (first reply is slow)`);
   try {
     const data = await callPredict({
       modelId:  MODELS[idx].id,
       text,
-      nPredict: PREDICT_TOKENS,
+      nPredict: BUFFER_TOKENS,
       ...samplerParams(),
     });
     if (myRun !== runSeq[idx] || idx !== activeIdx) return;
-    setGhost(idx, text, data.prediction || '');
-    setStatus(idx, `${(data.tokens || []).length} tokens predicted`);
+    bufferChunks[idx] = data.chunks || [];
+    bufferPos[idx]    = 0;
+    setGhost(idx, text, bufferChunks[idx][0] || '');
+    setStatus(idx, `${(data.tokens || []).length} tokens buffered · Tab reveals 5 at a time`);
   } catch (e) {
     if (myRun !== runSeq[idx] || idx !== activeIdx) return;
     setStatus(idx, `error: ${e.message}`);
@@ -920,6 +928,7 @@ function buildPrompts() {
       const idx   = activeIdx;
       const ta    = document.getElementById(`ta${idx}`);
       const ghost = document.getElementById(`ghost${idx}`);
+      bufferChunks[idx] = null; bufferPos[idx] = 0;
       ta.value = text;
       ta.focus();
       autoExpand(ta, ghost);
