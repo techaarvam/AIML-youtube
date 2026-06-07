@@ -526,10 +526,10 @@ const debounces         = new Array(MODELS.length).fill(null);
 const pendingPrediction = new Array(MODELS.length).fill('');
 const runSeq            = new Array(MODELS.length).fill(0);      // per-panel request id (drop stale responses)
 const warmState         = new Array(MODELS.length).fill('idle'); // idle | warming | ready | error
-const bufferChunks      = new Array(MODELS.length).fill(null);   // predicted continuation, in 5-token chunks
-const bufferPos         = new Array(MODELS.length).fill(0);      // next chunk to reveal on accept
-const prefetchChunks    = new Array(MODELS.length).fill(null);   // next batch fetched ahead of the drain
-const prefetchPending   = new Array(MODELS.length).fill(false);  // a prefetch request is in flight
+const curChunk          = new Array(MODELS.length).fill(null);   // committed 5-token chunk shown as the ghost
+const nextChunk         = new Array(MODELS.length).fill(null);   // prefetched next chunk (complete), or null
+const awaiting          = new Array(MODELS.length).fill(false);  // user drained → next generation streams live
+const aborter           = new Array(MODELS.length).fill(null);   // AbortController for the in-flight generation
 let   activeIdx         = 0;  // only one model is active/inferring at a time
 
 // ── Cookie helpers ────────────────────────────────────────────────────────────
@@ -567,6 +567,38 @@ async function callPredict(payload) {
   return data;
 }
 
+// Streaming variant: POSTs stream:true and calls onPiece(text) for each token as it
+// arrives (NDJSON), returning the final {done,tokens}. Pass an AbortSignal to cancel
+// mid-stream — the server detects the closed connection and stops generating.
+async function callPredictStream(payload, signal, onPiece) {
+  const resp = await fetch(`${FUNCTIONS_BASE}/predict`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ ...payload, stream: true }),
+    signal,
+  });
+  if (!resp.ok || !resp.body) throw new Error('predict failed (' + resp.status + ')');
+  const reader  = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '', result = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      const msg = JSON.parse(line);
+      if      (msg.t !== undefined) onPiece(msg.t);
+      else if (msg.error)           throw new Error(msg.error);
+      else if (msg.done)            result = msg;
+    }
+  }
+  return result || {};
+}
+
 // ── Build inference panels (Run 8 visible; older models behind a disclosure) ────
 function panelMarkup(m, idx) {
   return `
@@ -596,15 +628,14 @@ function wirePanel(idx) {
   const ghost = document.getElementById(`ghost${idx}`);
   ta.addEventListener('focus', () => setActive(idx));
   ta.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab' && pendingPrediction[idx]) {
+    if (e.key === 'Tab' && curChunk[idx]) {
       e.preventDefault();
       acceptPrediction(idx);
     }
   });
   document.getElementById(`acc${idx}`).addEventListener('click', () => acceptPrediction(idx));
   ta.addEventListener('input', () => {
-    bufferChunks[idx] = null; bufferPos[idx] = 0;   // typing invalidates the buffer
-    prefetchChunks[idx] = null;                     // ...and any prefetched continuation
+    resetGen(idx);                                  // typing aborts in-flight gen + drops buffer/prefetch
     autoExpand(ta, ghost);
     clearGhost(idx, ta.value);
     scheduleInference(idx);
@@ -657,28 +688,24 @@ function clearGhost(idx, text) { setGhost(idx, text, ''); }
 // Append the pending ghost prediction. Bound to both Tab (desktop) and the on-screen
 // "accept" button (mobile has no Tab key).
 function acceptPrediction(idx) {
-  const chunks = bufferChunks[idx];
-  if (!chunks || bufferPos[idx] >= chunks.length) return;
+  if (!curChunk[idx]) return;                   // nothing committed to accept (e.g. mid-stream)
   const ta = document.getElementById(`ta${idx}`);
-  ta.value += chunks[bufferPos[idx]];           // append the shown chunk
-  bufferPos[idx]++;
+  ta.value += curChunk[idx];                    // commit the shown chunk
+  curChunk[idx] = null;
 
-  if (bufferPos[idx] < chunks.length) {
-    setGhost(idx, ta.value, chunks[bufferPos[idx]]);   // (only if a request returned >1 chunk)
-    return;
-  }
-
-  // drained the shown 5 → reveal the prefetched next 5 if ready, then prefetch the following 5
-  if (prefetchChunks[idx] && prefetchChunks[idx].length) {
-    bufferChunks[idx]   = prefetchChunks[idx];
-    prefetchChunks[idx] = null;
-    bufferPos[idx]      = 0;
-    setGhost(idx, ta.value, bufferChunks[idx][0] || '');
-    prefetchNext(idx);
+  if (nextChunk[idx] != null) {
+    // prefetched continuation is ready → show instantly, then prefetch the following 5
+    curChunk[idx]  = nextChunk[idx];
+    nextChunk[idx] = null;
+    setGhost(idx, ta.value, curChunk[idx]);
+    setStatus(idx, 'Tab to accept · next 5 loading');
+    startPrefetch(idx);
   } else {
+    // not ready → the in-flight prefetch (if any) now streams live; otherwise start one
     setGhost(idx, ta.value, '');
-    setStatus(idx, 'predicting next 5…');
-    prefetchNext(idx);   // no-op if already in flight; otherwise fetch + auto-install on arrival
+    setStatus(idx, 'predicting…');
+    awaiting[idx] = true;
+    if (!aborter[idx]) startPrefetch(idx);
   }
 }
 
@@ -689,7 +716,7 @@ function setActive(idx) {
   showLineage(idx);
   warmModel(idx);
   const ta = document.getElementById(`ta${idx}`);
-  if (switching && ta.value.trim() && !bufferChunks[idx]) scheduleInference(idx);
+  if (switching && ta.value.trim() && !curChunk[idx]) scheduleInference(idx);
 }
 
 // ── Warm the server session so the first real prediction is fast ──────────────
@@ -723,78 +750,94 @@ function initPage() {
 // ── Inference (server-side via Firebase predict function) ─────────────────────
 function scheduleInference(idx) {
   if (idx !== activeIdx) return;       // only the active model infers
-  runSeq[idx]++;                       // invalidate any in-flight response
+  runSeq[idx]++;                       // invalidate any in-flight generation
+  abortGen(idx);                       // stop the server mid-stream (frees the instance)
   clearTimeout(debounces[idx]);
   debounces[idx] = setTimeout(() => runInference(idx), 280);
+}
+
+function abortGen(idx) {
+  if (aborter[idx]) { try { aborter[idx].abort(); } catch (e) {} aborter[idx] = null; }
+}
+function resetGen(idx) {
+  abortGen(idx);
+  curChunk[idx] = null; nextChunk[idx] = null; awaiting[idx] = false;
 }
 
 async function runInference(idx) {
   if (idx !== activeIdx) return;
   const ta   = document.getElementById(`ta${idx}`);
   const text = ta.value;
-  if (!text.trim()) { bufferChunks[idx] = null; bufferPos[idx] = 0; prefetchChunks[idx] = null; setGhost(idx, text, ''); return; }
+  if (!text.trim()) { resetGen(idx); setGhost(idx, text, ''); return; }
 
-  const myRun = runSeq[idx];           // drop the response if a newer keystroke supersedes it
-  setStatus(idx, 'predicting…');
+  abortGen(idx);
+  curChunk[idx] = null; nextChunk[idx] = null; awaiting[idx] = true;
+  const ac    = new AbortController(); aborter[idx] = ac;
+  const myRun = runSeq[idx];
+  setGhost(idx, text, ''); setStatus(idx, 'predicting…');
+
+  let acc = '';
   try {
-    const data = await callPredict({
-      modelId:  MODELS[idx].id,
-      text,
-      nPredict: BUFFER_TOKENS,
-      ...samplerParams(),
-    });
-    if (myRun !== runSeq[idx] || idx !== activeIdx) return;
-    bufferChunks[idx]   = data.chunks || [];
-    bufferPos[idx]      = 0;
-    prefetchChunks[idx] = null;          // new context → drop any stale prefetch
-    setGhost(idx, text, bufferChunks[idx][0] || '');
-    setStatus(idx, bufferChunks[idx][0] ? 'Tab to accept · next 5 loading' : 'no prediction');
-    prefetchNext(idx);                   // warm the next 5 while the user reads these
+    await callPredictStream(
+      { modelId: MODELS[idx].id, text, nPredict: BUFFER_TOKENS, ...samplerParams() },
+      ac.signal,
+      (piece) => {
+        if (myRun !== runSeq[idx] || idx !== activeIdx) return;
+        acc += piece;
+        setGhost(idx, ta.value, acc);    // first word lands in ~2s, then the ghost grows token-by-token
+      });
   } catch (e) {
-    if (myRun !== runSeq[idx] || idx !== activeIdx) return;
-    setStatus(idx, `error: ${e.message}`);
+    if (e.name !== 'AbortError' && myRun === runSeq[idx]) setStatus(idx, `error: ${e.message}`);
+    return;
+  } finally {
+    if (aborter[idx] === ac) aborter[idx] = null;
+  }
+  if (myRun !== runSeq[idx] || idx !== activeIdx) return;
+  curChunk[idx] = acc; awaiting[idx] = false;
+  setGhost(idx, ta.value, acc);
+  setStatus(idx, acc ? 'Tab to accept · next 5 loading' : 'no prediction');
+  startPrefetch(idx);                    // warm the next 5 while the user reads these
+}
+
+// Generate the next chunk ahead of the drain. Conditioned on the full text once the
+// shown chunk is accepted. If the user drains while this is running, it streams live.
+async function startPrefetch(idx) {
+  if (aborter[idx] || nextChunk[idx] != null) return;   // a generation is running, or next is ready
+  const ta = document.getElementById(`ta${idx}`);
+  const context = ta.value + (curChunk[idx] || '');
+  if (!context.trim()) return;
+  const ac    = new AbortController(); aborter[idx] = ac;
+  const myRun = runSeq[idx];
+  let acc = '';
+  try {
+    await callPredictStream(
+      { modelId: MODELS[idx].id, text: context, nPredict: BUFFER_TOKENS, ...samplerParams() },
+      ac.signal,
+      (piece) => {
+        if (myRun !== runSeq[idx]) return;
+        acc += piece;
+        if (awaiting[idx] && idx === activeIdx) setGhost(idx, ta.value, acc);  // user is waiting → stream live
+      });
+  } catch (e) {
+    return;   // silent — a later accept/keystroke retries
+  } finally {
+    if (aborter[idx] === ac) aborter[idx] = null;
+  }
+  if (myRun !== runSeq[idx]) return;
+  if (awaiting[idx] && idx === activeIdx) {
+    // user drained while we generated → promote to the current chunk and chain the next lookahead
+    curChunk[idx] = acc; awaiting[idx] = false;
+    setGhost(idx, ta.value, acc);
+    setStatus(idx, acc ? 'Tab to accept · next 5 loading' : 'type to predict more');
+    startPrefetch(idx);
+  } else {
+    nextChunk[idx] = acc;
+    if (idx === activeIdx) setStatus(idx, 'Tab to accept · next 5 ready');
   }
 }
 
 // Fetch the NEXT batch ahead of time, conditioned on the full current buffer being
 // accepted, so it's ready the instant the user drains the current one (no wait).
-async function prefetchNext(idx) {
-  if (prefetchPending[idx] || (prefetchChunks[idx] && prefetchChunks[idx].length)) return;
-  const chunks = bufferChunks[idx];
-  if (!chunks) return;
-  const ta = document.getElementById(`ta${idx}`);
-  const futureText = ta.value + chunks.slice(bufferPos[idx]).join('');  // text once the shown chunk is accepted
-  const myRun = runSeq[idx];
-  prefetchPending[idx] = true;
-  let data;
-  try {
-    data = await callPredict({
-      modelId:  MODELS[idx].id,
-      text:     futureText,
-      nPredict: BUFFER_TOKENS,
-      ...samplerParams(),
-    });
-  } catch (e) {
-    prefetchPending[idx] = false;        // silent — drain will retry
-    return;
-  }
-  prefetchPending[idx] = false;          // cleared before any chained call so the guard won't block it
-  if (myRun !== runSeq[idx]) return;     // user typed since → discard
-  const fresh = data.chunks || [];
-  const cur   = bufferChunks[idx];
-  if (cur && bufferPos[idx] >= cur.length && idx === activeIdx) {
-    // buffer already drained and waiting on us → install, reveal, and chain the next lookahead
-    bufferChunks[idx] = fresh;
-    bufferPos[idx]    = 0;
-    setGhost(idx, document.getElementById(`ta${idx}`).value, fresh[0] || '');
-    setStatus(idx, fresh[0] ? 'Tab to accept · next 5 loading' : 'type to predict more');
-    prefetchNext(idx);
-  } else {
-    prefetchChunks[idx] = fresh;         // stash for the swap on next accept
-    if (idx === activeIdx) setStatus(idx, 'Tab to accept · next 5 ready');
-  }
-}
-
 // ── Ghost text ────────────────────────────────────────────────────────────────
 function setGhost(idx, userText, predText) {
   pendingPrediction[idx] = predText;
@@ -988,7 +1031,7 @@ function buildPrompts() {
       const idx   = activeIdx;
       const ta    = document.getElementById(`ta${idx}`);
       const ghost = document.getElementById(`ghost${idx}`);
-      bufferChunks[idx] = null; bufferPos[idx] = 0; prefetchChunks[idx] = null;
+      resetGen(idx);
       ta.value = text;
       ta.focus();
       autoExpand(ta, ghost);
